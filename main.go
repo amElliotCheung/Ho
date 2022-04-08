@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"os"
 	"regexp"
@@ -9,12 +10,12 @@ import (
 var regexPat = regexp.MustCompile(`\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z0-9]*|==|<=|>=|&&|\|\||[[:punct:]])?`)
 
 func main() {
-	text, err := os.ReadFile("./sourcecode.txt")
-
-	if err != nil {
-		log.Fatal(err)
+	file, _ := os.Open("./sourcecode.txt")
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text() // string
+		log.Println(line)
 	}
-
-	log.Printf("File contents: %s", text)
 
 }
