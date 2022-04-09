@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bufio"
-	"log"
 	"os"
+	"stone/token"
 )
 
 const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z0-9]*|==|<=|>=|&&|\|\||[[:punct:]])?`
@@ -11,10 +10,5 @@ const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z
 func main() {
 	file, _ := os.Open("./sourcecode.txt")
 	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text() // string
-		log.Println(line)
-	}
-
+	lexer := token.NewLexer(file)
 }
