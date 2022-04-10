@@ -1,14 +1,22 @@
 package main
 
 import (
+	"log"
 	"os"
-	"stone/token"
+	"stone/lexer"
 )
 
-const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z0-9]*|==|<=|>=|&&|\|\||[[:punct:]])?`
+const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z0-9]*|==|<=|>=|&&|\|\||\\n|[[:punct:]])?`
 
 func main() {
-	file, _ := os.Open("./sourcecode.txt")
+	file, err := os.Open("./sourcecode.txt")
+	if err != nil {
+		log.Println(err)
+	}
 	defer file.Close()
-	lexer := token.NewLexer(file)
+	lexer := lexer.NewLexer(file, regexPat)
+	for i := 0; i < 10; i++ {
+		lexer.Readline()
+	}
+	lexer.ShowQueue()
 }

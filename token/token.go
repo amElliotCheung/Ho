@@ -13,7 +13,6 @@ type Token interface {
 
 const (
 	ident = iota
-	str
 )
 
 type BaseToken struct {
@@ -50,6 +49,12 @@ type NumToken struct {
 	value int
 }
 
+func NewNumToken(lineNo, val int) NumToken {
+	return NumToken{
+		BaseToken: BaseToken{lineNumber: lineNo},
+		value:     val,
+	}
+}
 func (t NumToken) IsNumber() bool {
 	return true
 }
@@ -68,6 +73,12 @@ type IdToken struct {
 	text string
 }
 
+func NewIdToken(lineNo int, text string) IdToken {
+	return IdToken{
+		BaseToken: BaseToken{lineNumber: lineNo},
+		text:      text,
+	}
+}
 func (t IdToken) IsIdentifier() bool {
 	return true
 }
@@ -82,6 +93,12 @@ type StrToken struct {
 	literal string
 }
 
+func NewStrToken(lineNo int, str string) StrToken {
+	return StrToken{
+		BaseToken: BaseToken{lineNumber: lineNo},
+		literal:   str,
+	}
+}
 func (t StrToken) IsString() bool {
 	return true
 }

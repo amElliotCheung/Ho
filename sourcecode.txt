@@ -1,3 +1,4 @@
+// s
 even = 0
 odd = 0
 i = 1
@@ -10,5 +11,3 @@ while i < 10 {
     i = i + 1
 }
 even + odd
-s
-3
