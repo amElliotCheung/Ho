@@ -1,4 +1,4 @@
-package token
+package parser
 
 import "strconv"
 
@@ -11,9 +11,8 @@ type Token interface {
 	GetText() string
 }
 
-const (
-	ident = iota
-)
+var EOF = BaseToken{lineNumber: -1}
+var EOL = `\n`
 
 type BaseToken struct {
 	lineNumber int
@@ -39,7 +38,7 @@ func (t BaseToken) GetNumber() int {
 	panic("not a number!")
 }
 
-func (t BaseToken) getText() string {
+func (t BaseToken) GetText() string {
 	return ""
 }
 

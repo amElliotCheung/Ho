@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"stone/lexer"
+	"stone/parser"
 )
 
 const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z0-9]*|==|<=|>=|&&|\|\||\\n|[[:punct:]])?`
@@ -14,9 +14,9 @@ func main() {
 		log.Println(err)
 	}
 	defer file.Close()
-	lexer := lexer.NewLexer(file, regexPat)
-	for i := 0; i < 10; i++ {
-		lexer.Readline()
+	lexer := parser.NewLexer(file, regexPat)
+	for tk := lexer.Read(); tk != parser.EOF; tk = lexer.Read() {
+		log.Println(tk)
 	}
 	lexer.ShowQueue()
 }

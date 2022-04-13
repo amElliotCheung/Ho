@@ -1,4 +1,4 @@
-package lexer
+package parser
 
 import (
 	"bufio"
@@ -6,14 +6,13 @@ import (
 	"io"
 	"log"
 	"regexp"
-	"stone/token"
 	"strconv"
 )
 
 type Lexer struct {
 	pat     *regexp.Regexp // regular expression
 	scanner *bufio.Scanner
-	queue   []token.Token // list of tokens
+	queue   []Token // list of tokens
 	lineNo  int
 	hasMore bool
 }
@@ -22,7 +21,7 @@ func NewLexer(in io.Reader, regexpPat string) *Lexer {
 	return &Lexer{
 		pat:     regexp.MustCompile(regexpPat),
 		scanner: bufio.NewScanner(in),
-		queue:   make([]token.Token, 2),
+		queue:   make([]Token, 2),
 		lineNo:  0,
 		hasMore: true,
 	}
@@ -34,7 +33,7 @@ func (l *Lexer) Readline() {
 	if l.scanner.Scan() {
 		line = l.scanner.Text()
 		l.lineNo += 1
-		log.Printf("%v--%v", line, line[len(line)-1]) // output
+		//log.Printf("%v--%v", line, line[len(line)-1]) // output
 	} else {
 		l.hasMore = false
 		return
@@ -49,24 +48,51 @@ func (l *Lexer) Readline() {
 			log.Fatalln("bad token at line ", l.lineNo)
 		}
 	}
-	l.AddToken("\\n")
+	l.AddToken(EOL)
+}
+
+func (l *Lexer) fillQueue(i int) bool {
+	for i >= len(l.queue) {
+		if l.hasMore == false {
+			return false
+		}
+		l.Readline()
+	}
+	return true
+}
+
+func (l *Lexer) Peek(i int) Token {
+	if l.fillQueue(i) == false {
+		return EOF
+	}
+	return l.queue[i]
+}
+
+func (l *Lexer) Read() Token {
+	if l.fillQueue(0) {
+		tk := l.queue[0]
+		l.queue = l.queue[1:]
+		return tk
+	}
+	return EOF
+
 }
 
 func (l *Lexer) AddToken(str string) {
 	matches := l.pat.FindAllStringSubmatch(str, -1)[0]
 	m1 := matches[1] // the first par match
-	fmt.Println("the match:\n\t", m1)
-	if m1 == "" || m1 == `\n` || matches[2] != "" { // empty or \n or comment
+
+	if m1 == "" || matches[2] != "" { // empty or \n or comment
 		return
 	}
-	var tk token.Token
+	var tk Token
 	if matches[3] != "" { // number
 		val, _ := strconv.Atoi(matches[3])
-		tk = token.NewNumToken(l.lineNo, val)
+		tk = NewNumToken(l.lineNo, val)
 	} else if matches[4] != "" { // string
-		tk = token.NewStrToken(l.lineNo, l.toStringLiteral(matches[4]))
+		tk = NewStrToken(l.lineNo, l.toStringLiteral(matches[4]))
 	} else { // identifier
-		tk = token.NewIdToken(l.lineNo, m1)
+		tk = NewIdToken(l.lineNo, m1)
 	}
 	l.queue = append(l.queue, tk)
 }
@@ -80,11 +106,11 @@ func (l *Lexer) ShowQueue() {
 	for _, item := range l.queue {
 		if item != nil {
 			switch v := item.(type) {
-			case token.NumToken:
+			case NumToken:
 				fmt.Printf("Number: %v\n", v.GetText())
-			case token.StrToken:
+			case StrToken:
 				fmt.Printf("String: %v\n", v.GetText())
-			case token.IdToken:
+			case IdToken:
 				fmt.Printf("Ident: %v\n", v.GetText())
 			default:
 				// And here I'm feeling dumb. ;)
