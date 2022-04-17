@@ -14,9 +14,10 @@ func main() {
 		log.Println(err)
 	}
 	defer file.Close()
+	// ================== test lexer
 	lexer := parser.NewLexer(file, regexPat)
 	for tk := lexer.Read(); tk != parser.EOF; tk = lexer.Read() {
 		log.Println(tk)
 	}
-	lexer.ShowQueue()
+
 }

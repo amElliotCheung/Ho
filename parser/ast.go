@@ -1,10 +1,18 @@
 package parser
 
+import "bytes"
+
+type Program interface {
+}
+type Statement interface {
+}
+
 // ==================== ASTNode Interface
 type ASTNode interface {
 	child(int) ASTNode
 	numChildren() int
 	children() []ASTNode
+	string() string
 }
 
 // ==================== ASTLeaf
@@ -20,6 +28,10 @@ func (leaf ASTLeaf) numChildren() int {
 }
 func (leaf ASTLeaf) children() []ASTNode {
 	return []ASTNode{}
+}
+
+func (leaf ASTLeaf) string() string {
+	return leaf.Token.GetText()
 }
 
 // ==================== NumberLiteral
@@ -56,6 +68,18 @@ func (list ASTList) numChildren() int {
 }
 func (list ASTList) children() []ASTNode {
 	return list.nodes
+}
+
+func (list ASTList) string() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	for _, node := range list.nodes {
+		out.WriteString(node.string() + `\n`)
+	}
+	out.WriteString(")")
+
+	return out.String()
 }
 
 // ================== BinaryExpr
