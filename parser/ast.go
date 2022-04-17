@@ -12,7 +12,7 @@ type ASTNode interface {
 	child(int) ASTNode
 	numChildren() int
 	children() []ASTNode
-	string() string
+	String() string
 }
 
 // ==================== ASTLeaf
@@ -30,7 +30,7 @@ func (leaf ASTLeaf) children() []ASTNode {
 	return []ASTNode{}
 }
 
-func (leaf ASTLeaf) string() string {
+func (leaf ASTLeaf) String() string {
 	return leaf.Token.GetText()
 }
 
@@ -70,7 +70,7 @@ func (list ASTList) children() []ASTNode {
 	return list.nodes
 }
 
-func (list ASTList) string() string {
+func (list ASTList) String() string {
 	var out bytes.Buffer
 
 	out.WriteString("(")
