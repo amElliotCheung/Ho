@@ -49,10 +49,11 @@ func NewParser(l *Lexer) *Parser {
 		prefixParser: make(map[string]prefixParseFn),
 		infixParser:  make(map[string]infixParseFn),
 	}
-	p.prefixParser[IDENT] = p.parseIdentifier
-	p.prefixParser[INT] = p.parseIdentifier
 
-	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, EQ, NEQ, LT, GT} {
+	p.prefixParser[IDENT] = p.parseIdentifier
+	p.prefixParser[INT] = p.parseInteger
+	p.prefixParser[LPAREN] = p.parseGroupedExpression
+	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK} {
 		p.infixParser[op] = p.parseInfixExpression
 	}
 
@@ -86,6 +87,9 @@ func (p *Parser) Parse() (ASTNode, error) {
 		case NumToken:
 			log.Println("number, enter Expression")
 			stmt, err = p.parseExpression(LOWEST)
+		case OpToken:
+			log.Println("operator, enter Expression")
+			stmt, err = p.parseExpression(LOWEST)
 		default:
 			log.Println("no match for ", p.cur.GetType(), p.cur)
 		}
@@ -107,9 +111,6 @@ func (p *Parser) parseAssign() (ASTNode, error) {
 	assign.addChild(&ASTLeaf{Token: p.cur}) // identifier
 	p.advance()
 	p.advance()
-	// if !p.checkCur("=") {
-	// 	return nil, errors.New(fmt.Sprintf("want =, got %s", p.cur.GetType()))
-	// }
 
 	expr, err := p.parseExpression(LOWEST) //
 	if err != nil {
@@ -134,7 +135,16 @@ func (p *Parser) parseExpression(precedence int) (ASTNode, error) {
 	}
 	return left, nil
 }
-
+func (p *Parser) parseGroupedExpression() (ASTNode, error) {
+	p.advance() // skip (
+	expr, err := p.parseExpression(LOWEST)
+	if p.checkNext(")") {
+		p.advance()
+		return expr, err
+	} else {
+		return nil, fmt.Errorf("( ) don't match")
+	}
+}
 func (p *Parser) parseInfixExpression(left ASTNode) (ASTNode, error) {
 	expr := ASTList{Token: p.cur}
 	expr.addChild(left)
