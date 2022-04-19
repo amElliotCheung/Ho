@@ -21,7 +21,7 @@ func NewLexer(in io.Reader, regexpPat string) *Lexer {
 	return &Lexer{
 		pat:     regexp.MustCompile(regexpPat),
 		scanner: bufio.NewScanner(in),
-		queue:   make([]Token, 2),
+		queue:   make([]Token, 0),
 		lineNo:  0,
 		hasMore: true,
 	}
@@ -48,7 +48,7 @@ func (l *Lexer) Readline() {
 			log.Fatalln("bad token at line ", l.lineNo)
 		}
 	}
-	l.AddToken(EOL)
+	l.queue = append(l.queue, EOL)
 }
 
 func (l *Lexer) fillQueue(i int) bool {
@@ -82,6 +82,9 @@ func (l *Lexer) AddToken(str string) {
 	matches := l.pat.FindAllStringSubmatch(str, -1)[0]
 	m1 := matches[1] // the first par match
 
+	// for i, m := range matches {
+	// 	log.Println("matches : ", i, m)
+	// }
 	if m1 == "" || matches[2] != "" { // empty or \n or comment
 		return
 	}
@@ -91,10 +94,13 @@ func (l *Lexer) AddToken(str string) {
 		tk = NewNumToken(l.lineNo, val)
 	} else if matches[4] != "" { // string
 		tk = NewStrToken(l.lineNo, l.toStringLiteral(matches[4]))
-	} else { // identifier
-		tk = NewIdToken(l.lineNo, m1)
+	} else if matches[6] != "" { // identifier
+		tk = NewIdToken(l.lineNo, matches[6])
+	} else {
+		tk = NewOpToken(l.lineNo, m1)
 	}
 	l.queue = append(l.queue, tk)
+	// log.Printf("add %T type token", tk)
 }
 
 func (l *Lexer) toStringLiteral(s string) string {

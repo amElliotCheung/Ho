@@ -1,6 +1,9 @@
 package parser
 
-import "bytes"
+import (
+	"bytes"
+	"fmt"
+)
 
 type Program interface {
 }
@@ -13,6 +16,7 @@ type ASTNode interface {
 	numChildren() int
 	children() []ASTNode
 	String() string
+	addChild(ASTNode)
 }
 
 // ==================== ASTLeaf
@@ -27,11 +31,15 @@ func (leaf ASTLeaf) numChildren() int {
 	return 0
 }
 func (leaf ASTLeaf) children() []ASTNode {
-	return []ASTNode{}
+	return nil
 }
 
 func (leaf ASTLeaf) String() string {
 	return leaf.Token.GetText()
+}
+
+func (leaf ASTLeaf) addChild(node ASTNode) {
+	panic("a leaf can't have child")
 }
 
 // ==================== NumberLiteral
@@ -54,6 +62,7 @@ func (name Name) name() string {
 
 // ==================== ASTList
 type ASTList struct {
+	Token
 	nodes []ASTNode
 }
 
@@ -73,13 +82,19 @@ func (list ASTList) children() []ASTNode {
 func (list ASTList) String() string {
 	var out bytes.Buffer
 
+	out.WriteString(fmt.Sprintf("i have %d children", len(list.nodes)))
 	out.WriteString("(")
+
 	for _, node := range list.nodes {
-		out.WriteString(node.string() + `\n`)
+		out.WriteString(node.String() + " ")
 	}
 	out.WriteString(")")
 
 	return out.String()
+}
+
+func (l *ASTList) addChild(node ASTNode) {
+	l.nodes = append(l.nodes, node)
 }
 
 // ================== BinaryExpr
@@ -92,8 +107,28 @@ func (be BinaryExpr) left() ASTNode {
 }
 func (be BinaryExpr) operator() string {
 	// later
-	return ""
+	return be.Token.GetType()
 }
 func (be BinaryExpr) right() ASTNode {
-	return be.child(2)
+	return be.child(1)
+}
+func (be BinaryExpr) String() string {
+	return "(" + be.child(0).String() + be.Token.GetText() + be.child(1).String() + ")"
+}
+
+// ================== AssignStatement
+type AssignStatement struct {
+	ASTList
+}
+
+func (as AssignStatement) ident() ASTNode {
+	return as.child(0)
+}
+
+func (as AssignStatement) value() ASTNode {
+	return as.child(1)
+}
+
+func (as AssignStatement) String() string {
+	return "(" + as.child(0).String() + as.Token.GetText() + as.child(1).String() + ")"
 }
