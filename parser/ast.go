@@ -147,7 +147,12 @@ func (is IfStatement) String() string {
 	out.WriteString("(")
 
 	for i := 0; i < len(is.nodes); i += 2 {
-		out.WriteString("if " + is.child(i).String())
+		if i == 0 {
+			out.WriteString("if ")
+		} else {
+			out.WriteString("else if ")
+		}
+		out.WriteString(is.child(i).String())
 		out.WriteString("then " + is.child(i+1).String())
 	}
 	out.WriteString(")")

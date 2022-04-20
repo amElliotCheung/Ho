@@ -64,9 +64,8 @@ func NewParser(l *Lexer) *Parser {
 // ================== parse functions
 func (p *Parser) Parse() (ASTNode, error) {
 	prog := &ASTList{}
-	cnt := 0 // to debug
 	for p.cur != EOF {
-		log.Println("cur and next are ", p.cur, p.next)
+		log.Println("parse : cur and next are ", p.cur, p.next)
 		if p.cur == EOL {
 			p.advance()
 			continue
@@ -75,11 +74,12 @@ func (p *Parser) Parse() (ASTNode, error) {
 		if err != nil {
 			return nil, err
 		}
+		// debug
+		log.Println("parse : ", p.lexer.lineNo, "th line : ", stmt.String())
+		// advance
 		p.advance()
 		prog.addChild(stmt)
-		// debug
-		cnt++
-		log.Println(cnt, "th line : ", stmt.String())
+
 	}
 	return prog, nil
 }
@@ -120,7 +120,7 @@ func (p *Parser) parseAssign() (ASTNode, error) {
 	assign := ASTList{Token: p.next}        // =
 	assign.addChild(&ASTLeaf{Token: p.cur}) // identifier
 	p.advance()
-	p.advance()
+	p.skip("=")
 
 	expr, err := p.parseExpression(LOWEST) //
 	if err != nil {
@@ -132,13 +132,13 @@ func (p *Parser) parseAssign() (ASTNode, error) {
 func (p *Parser) parseExpression(precedence int) (ASTNode, error) {
 	parser, ok := p.prefixParser[p.cur.GetType()]
 	if !ok {
-		return nil, fmt.Errorf("no prefix function for %s", p.cur.GetType())
+		return nil, fmt.Errorf("no prefix function for %v", p.cur.GetType())
 	}
 	left, _ := parser() // ASTNode, error
 	for p.next != EOL && precedence < p.peekPrecedence() {
 		infix, ok := p.infixParser[p.next.GetType()]
 		if !ok {
-			return left, fmt.Errorf("no infix function for %s", p.next.GetType())
+			return left, fmt.Errorf("no infix function for %v", p.next.GetType())
 		}
 		p.advance()
 		left, _ = infix(left)
@@ -146,7 +146,7 @@ func (p *Parser) parseExpression(precedence int) (ASTNode, error) {
 	return left, nil
 }
 func (p *Parser) parseGroupedExpression() (ASTNode, error) {
-	p.advance() // skip (
+	p.skip("(")
 	expr, err := p.parseExpression(LOWEST)
 	if p.checkNext(")") {
 		p.advance()
@@ -178,19 +178,12 @@ func (p *Parser) parseIf() (ASTNode, error) {
 		return nil, err
 	}
 	p.advance()
-	if !p.checkCur("{") {
-		return nil, fmt.Errorf("expect {, got %T , %v", p.cur.GetText(), p.cur.GetText())
-	}
-	p.advance()
 	block, err := p.parseBlock()
 	if err != nil {
 		return nil, err
 	}
 	node.addChild(expr)
 	node.addChild(block)
-	if p.checkCur("}") {
-		p.advance()
-	}
 	// ------------------- else
 	for p.checkCur("else") {
 		if p.checkNext("if") {
@@ -200,9 +193,7 @@ func (p *Parser) parseIf() (ASTNode, error) {
 			if err != nil {
 				return nil, err
 			}
-			if !p.checkCur("{") {
-				return nil, fmt.Errorf("expect {, got %v", p.cur.GetText())
-			}
+			p.advance()
 			block, err := p.parseBlock()
 			if err != nil {
 				return nil, err
@@ -210,10 +201,6 @@ func (p *Parser) parseIf() (ASTNode, error) {
 			node.addChild(expr)
 			node.addChild(block)
 		} else {
-			p.advance()
-			if !p.checkCur("{") {
-				return nil, fmt.Errorf("expect {, got %v", p.cur.GetText())
-			}
 			p.advance()
 			block, err := p.parseBlock()
 			if err != nil {
@@ -234,26 +221,19 @@ func (p *Parser) parseWhile() (ASTNode, error) {
 		return nil, err
 	}
 	p.advance()
-	if !p.checkCur("{") {
-		return nil, fmt.Errorf("expect {, got %v", p.cur.GetText())
-	}
-	p.advance()
 	block, err := p.parseBlock()
 	if err != nil {
 		return nil, err
 	}
 	node.addChild(expr)
 	node.addChild(block)
-	if p.checkCur("}") {
-		p.advance()
-	}
 
 	return &WhileStatement{ASTList: node}, nil
 }
 
 func (p *Parser) parseBlock() (ASTNode, error) {
+	p.skip("{")
 	block := &ASTList{}
-	cnt := p.lexer.lineNo // to debug
 	for p.cur.GetText() != "}" {
 		log.Println("cur and next are ", p.cur, p.next)
 
@@ -267,11 +247,15 @@ func (p *Parser) parseBlock() (ASTNode, error) {
 		if err != nil {
 			return nil, err
 		}
+		// debug
+		log.Println(p.lexer.lineNo, "th line : ", stmt.String())
+		// advance
 		p.advance()
 		block.addChild(stmt)
-		// debug
-		cnt++
-		log.Println(cnt, "th line : ", stmt.String())
+
+	}
+	if p.checkCur("}") {
+		p.advance()
 	}
 	return block, nil
 }
@@ -292,6 +276,14 @@ func (p *Parser) peekPrecedence() int {
 }
 
 // ======================= helper functions
+
+func (p *Parser) skip(s string) {
+	if p.checkCur(s) {
+		p.advance()
+	} else {
+		log.Fatalln("expect ", s, "got", p.cur.GetText())
+	}
+}
 
 func (p *Parser) advance() {
 	p.cur = p.lexer.Read()
