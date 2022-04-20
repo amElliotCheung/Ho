@@ -53,7 +53,7 @@ func NewParser(l *Lexer) *Parser {
 	p.prefixParser[IDENT] = p.parseIdentifier
 	p.prefixParser[INT] = p.parseInteger
 	p.prefixParser[LPAREN] = p.parseGroupedExpression
-	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK} {
+	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, LT, GT, EQ, NEQ, MOD} {
 		p.infixParser[op] = p.parseInfixExpression
 	}
 
@@ -64,36 +64,14 @@ func NewParser(l *Lexer) *Parser {
 // ================== parse functions
 func (p *Parser) Parse() (ASTNode, error) {
 	prog := &ASTList{}
-	var stmt ASTNode
-	var err error
 	cnt := 0 // to debug
 	for p.cur != EOF {
 		log.Println("cur and next are ", p.cur, p.next)
-
 		if p.cur == EOL {
 			p.advance()
 			continue
 		}
-
-		switch p.cur.(type) {
-		case IdToken:
-			if p.checkNext("=") {
-				log.Println("id=, enter Assign")
-				stmt, err = p.parseAssign()
-			} else {
-				log.Println("id, enter Expression")
-				stmt, err = p.parseExpression(LOWEST)
-			}
-		case NumToken:
-			log.Println("number, enter Expression")
-			stmt, err = p.parseExpression(LOWEST)
-		case OpToken:
-			log.Println("operator, enter Expression")
-			stmt, err = p.parseExpression(LOWEST)
-		default:
-			log.Println("no match for ", p.cur.GetType(), p.cur)
-		}
-
+		stmt, err := p.parseStatement()
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +83,39 @@ func (p *Parser) Parse() (ASTNode, error) {
 	}
 	return prog, nil
 }
+func (p *Parser) parseStatement() (ASTNode, error) {
+	var stmt ASTNode
+	var err error
+	switch p.cur.(type) {
+	case IdToken:
+		if p.checkNext("=") {
+			log.Println("id=, enter Assign")
+			stmt, err = p.parseAssign()
+		} else if p.checkCur("while") {
+			log.Println("while, enter while")
+			stmt, err = p.parseWhile()
+		} else if p.checkCur("if") {
+			log.Println("if, enter if")
+			stmt, err = p.parseIf()
+		} else {
+			log.Println("id, enter Expression")
+			stmt, err = p.parseExpression(LOWEST)
+		}
+	case NumToken:
+		log.Println("number, enter Expression")
+		stmt, err = p.parseExpression(LOWEST)
+	case OpToken:
+		log.Println("operator, enter Expression")
+		stmt, err = p.parseExpression(LOWEST)
+	default:
+		log.Println("no match for ", p.cur.GetType(), p.cur)
+	}
 
+	if err != nil {
+		return nil, err
+	}
+	return stmt, nil
+}
 func (p *Parser) parseAssign() (ASTNode, error) {
 	assign := ASTList{Token: p.next}        // =
 	assign.addChild(&ASTLeaf{Token: p.cur}) // identifier
@@ -158,6 +168,112 @@ func (p *Parser) parseInfixExpression(left ASTNode) (ASTNode, error) {
 	expr.addChild(right)
 
 	return &BinaryExpr{ASTList: expr}, nil
+}
+
+func (p *Parser) parseIf() (ASTNode, error) {
+	node := ASTList{Token: p.cur}
+	p.advance()
+	expr, err := p.parseExpression(LOWEST)
+	if err != nil {
+		return nil, err
+	}
+	p.advance()
+	if !p.checkCur("{") {
+		return nil, fmt.Errorf("expect {, got %T , %v", p.cur.GetText(), p.cur.GetText())
+	}
+	p.advance()
+	block, err := p.parseBlock()
+	if err != nil {
+		return nil, err
+	}
+	node.addChild(expr)
+	node.addChild(block)
+	if p.checkCur("}") {
+		p.advance()
+	}
+	// ------------------- else
+	for p.checkCur("else") {
+		if p.checkNext("if") {
+			p.advance()
+			p.advance()
+			expr, err = p.parseExpression(LOWEST)
+			if err != nil {
+				return nil, err
+			}
+			if !p.checkCur("{") {
+				return nil, fmt.Errorf("expect {, got %v", p.cur.GetText())
+			}
+			block, err := p.parseBlock()
+			if err != nil {
+				return nil, err
+			}
+			node.addChild(expr)
+			node.addChild(block)
+		} else {
+			p.advance()
+			if !p.checkCur("{") {
+				return nil, fmt.Errorf("expect {, got %v", p.cur.GetText())
+			}
+			p.advance()
+			block, err := p.parseBlock()
+			if err != nil {
+				return nil, err
+			}
+			node.addChild(&ASTLeaf{Token: NewIdToken(p.lexer.lineNo, "true")}) // true condition
+			node.addChild(block)
+		}
+	}
+	return &IfStatement{ASTList: node}, nil
+}
+
+func (p *Parser) parseWhile() (ASTNode, error) {
+	node := ASTList{Token: p.cur}
+	p.advance()
+	expr, err := p.parseExpression(LOWEST)
+	if err != nil {
+		return nil, err
+	}
+	p.advance()
+	if !p.checkCur("{") {
+		return nil, fmt.Errorf("expect {, got %v", p.cur.GetText())
+	}
+	p.advance()
+	block, err := p.parseBlock()
+	if err != nil {
+		return nil, err
+	}
+	node.addChild(expr)
+	node.addChild(block)
+	if p.checkCur("}") {
+		p.advance()
+	}
+
+	return &WhileStatement{ASTList: node}, nil
+}
+
+func (p *Parser) parseBlock() (ASTNode, error) {
+	block := &ASTList{}
+	cnt := p.lexer.lineNo // to debug
+	for p.cur.GetText() != "}" {
+		log.Println("cur and next are ", p.cur, p.next)
+
+		if p.cur == EOL {
+			p.advance()
+			continue
+		}
+
+		stmt, err := p.parseStatement()
+
+		if err != nil {
+			return nil, err
+		}
+		p.advance()
+		block.addChild(stmt)
+		// debug
+		cnt++
+		log.Println(cnt, "th line : ", stmt.String())
+	}
+	return block, nil
 }
 
 func (p *Parser) parseIdentifier() (ASTNode, error) {

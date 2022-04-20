@@ -5,11 +5,6 @@ import (
 	"fmt"
 )
 
-type Program interface {
-}
-type Statement interface {
-}
-
 // ==================== ASTNode Interface
 type ASTNode interface {
 	child(int) ASTNode
@@ -82,7 +77,7 @@ func (list ASTList) children() []ASTNode {
 func (list ASTList) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(fmt.Sprintf("i have %d children", len(list.nodes)))
+	out.WriteString(fmt.Sprintf("I have %d children ==> ", len(list.nodes)))
 	out.WriteString("(")
 
 	for _, node := range list.nodes {
@@ -131,4 +126,48 @@ func (as AssignStatement) value() ASTNode {
 
 func (as AssignStatement) String() string {
 	return "(" + as.child(0).String() + as.Token.GetText() + as.child(1).String() + ")"
+}
+
+// ================= If Statement
+type IfStatement struct {
+	ASTList
+}
+
+func (is IfStatement) condition(i int) ASTNode {
+	return is.child(2 * i)
+}
+
+func (is IfStatement) block(i int) ASTNode {
+	return is.child(2*i + 1)
+}
+
+func (is IfStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+
+	for i := 0; i < len(is.nodes); i += 2 {
+		out.WriteString("if " + is.child(i).String())
+		out.WriteString("then " + is.child(i+1).String())
+	}
+	out.WriteString(")")
+
+	return out.String()
+}
+
+// ================= While Statement
+type WhileStatement struct {
+	ASTList
+}
+
+func (ws WhileStatement) condition() ASTNode {
+	return ws.child(0)
+}
+
+func (ws WhileStatement) block() ASTNode {
+	return ws.child(1)
+}
+
+func (ws WhileStatement) String() string {
+	return "(" + ws.Token.GetText() + " " + ws.child(0).String() + " do " + ws.child(1).String() + ")"
 }
