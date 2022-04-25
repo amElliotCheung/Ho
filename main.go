@@ -3,21 +3,66 @@ package main
 import (
 	"log"
 	"os"
-	"stone/parser"
+	interpreter "stone/parser"
 )
 
-const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|[A-Z_a-z][A-Z_a-z0-9]*|==|<=|>=|&&|\|\||\\n|[[:punct:]])?`
+const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|<|<=|>|>=|&&|\|\||\\n|[[:punct:]]))?`
 
 func main() {
-	file, err := os.Open("./sourcecode.txt")
+	log.SetFlags(0) // no prefix
+	filename := "./sourcecode.txt"
+	// lexer_text(filename)
+	// lexer_text("./sourcecode.txt")
+	parser_text(filename)
+	// evaluater_text(filename)
+}
+
+//================== test lexer
+func lexer_text(filename string) {
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Println(err)
 	}
 	defer file.Close()
-	// ================== test lexer
-	lexer := parser.NewLexer(file, regexPat)
-	for tk := lexer.Read(); tk != parser.EOF; tk = lexer.Read() {
+
+	lexer := interpreter.NewLexer(file, regexPat)
+	for tk := lexer.Read(); tk != interpreter.EOF; tk = lexer.Read() {
 		log.Println(tk)
+	}
+}
+
+func parser_text(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Println(err)
+	}
+	defer file.Close()
+
+	lexer := interpreter.NewLexer(file, regexPat)
+	parser := interpreter.NewParser(lexer)
+
+	c := make(chan interpreter.ASTNode)
+	go parser.Parse(c)
+	if err != nil {
+		log.Println("error:\t", err)
+	}
+	for item := range c {
+		log.Println("receive item from channel : ", item)
 	}
 
 }
+
+// func evaluater_text(filename string) {
+// 	file, err := os.Open(filename)
+// 	if err != nil {
+// 		log.Println(err)
+// 	}
+// 	defer file.Close()
+
+// 	lexer := interpreter.NewLexer(file, regexPat)
+// 	parser := interpreter.NewParser(lexer)
+// 	c := make(chan interpreter.ASTNode)
+// 	parser.Parse(c)
+// 	evaluater := interpreter.NewEvaluater(c)
+// 	evaluater.Eval()
+// }

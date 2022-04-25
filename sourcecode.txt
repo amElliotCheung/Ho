@@ -1,11 +1,22 @@
-// s
+// test code
+a = 0
+b = 0
+c = 0
+if 1 > 2 {
+    a = a + 2*3 + 1
+    a = a - 3*2/1 + 1 - 1/1
+} else if 2 > 3 {
+    b = b + 1 + 0
+} else {
+    c = c + 1
+}
 even = 0
 odd = 0
-i = 1
+i = 0
 while i < 10 {
-    if i % 2 == 0 { // even number?
+    if i % 2 == 0 { // even number
         even = even + i
-    } else {
+    } else { 
         odd = odd + i
     }
     i = i + 1

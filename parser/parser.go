@@ -1,4 +1,4 @@
-package parser
+package interpreter
 
 import (
 	"fmt"
@@ -62,7 +62,7 @@ func NewParser(l *Lexer) *Parser {
 }
 
 // ================== parse functions
-func (p *Parser) Parse() (ASTNode, error) {
+func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 	prog := &ASTList{}
 	for p.cur != EOF {
 		log.Println("parse : cur and next are ", p.cur, p.next)
@@ -79,8 +79,9 @@ func (p *Parser) Parse() (ASTNode, error) {
 		// advance
 		p.advance()
 		prog.addChild(stmt)
-
+		res <- stmt
 	}
+	close(res)
 	return prog, nil
 }
 func (p *Parser) parseStatement() (ASTNode, error) {
@@ -281,7 +282,7 @@ func (p *Parser) skip(s string) {
 	if p.checkCur(s) {
 		p.advance()
 	} else {
-		log.Fatalln("expect ", s, "got", p.cur.GetText())
+		log.Fatalln(p.lexer.lineNo, "expect ", s, "got", p.cur.GetText())
 	}
 }
 
