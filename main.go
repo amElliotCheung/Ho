@@ -14,8 +14,11 @@ func main() {
 	// lexer_test("./sourcecode.txt")
 	// parser_test("./sourcecode.txt")
 	// go evaluater_test("./evaluation.txt")
-	evaluater_test("./fact.txt")
-	evaluater_test("./ternary.txt")
+	// evaluater_test("./fact.txt")
+	// evaluater_test("./ternary.txt")
+	// evaluater_test("./sum.txt")
+	// parser_test("./sum2.txt")
+	evaluater_test("./sum2.txt")
 
 }
 

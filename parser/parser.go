@@ -8,6 +8,7 @@ import (
 const (
 	_ int = iota
 	LOWEST
+	ASSIGNPRE
 	QUESTIONMARK // ? :
 	EQUALS       // ==
 	LESSGREATER  // > or <
@@ -31,6 +32,7 @@ var precedences = map[string]int{
 	"(":  CALL,
 	// "?":  CALL,
 	"?": QUESTIONMARK,
+	"=": ASSIGNPRE,
 }
 
 type (
@@ -56,7 +58,7 @@ func NewParser(l *Lexer) *Parser {
 	p.prefixParser[IDENT] = p.parseIdentifier
 	p.prefixParser[INT] = p.parseInteger
 	p.prefixParser[LPAREN] = p.parseGroupedExpression
-	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, LT, GT, EQ, NEQ, MOD} {
+	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, LT, GT, EQ, NEQ, MOD, ASSIGN} {
 		p.infixParser[op] = p.parseInfixExpression
 	}
 	p.infixParser["?"] = p.parseTernary
@@ -69,7 +71,7 @@ func NewParser(l *Lexer) *Parser {
 func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 	prog := &ASTList{}
 	for p.cur != EOF {
-		// log.Println("parse : cur and next are ", p.cur, p.next)
+		// // log.Println("parse : cur and next are ", p.cur, p.next)
 		if p.cur == EOL {
 			p.advance()
 			continue
@@ -79,7 +81,7 @@ func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 			return nil, err
 		}
 		// debug
-		log.Println("parse : ", p.lexer.lineNo, "th line : ", stmt.String())
+		// log.Println("parse : ", p.lexer.lineNo, "th line : ", stmt.String())
 		// advance
 		p.advance()
 		prog.addChild(stmt)
@@ -99,25 +101,26 @@ func (p *Parser) parseStatement() (ASTNode, error) {
 	var err error
 	switch p.cur.(type) {
 	case IdToken:
-		log.Println("- - - - ", p.cur, "- - - - - - - ", p.next)
-		if p.checkNext("=") {
-			log.Println("id=, enter Assign")
-			stmt, err = p.parseAssign()
-		} else if p.checkCur("while") {
-			log.Println("while, enter while")
+		// log.Println("- - - - ", p.cur, "- - - - - - - ", p.next)
+		// if p.checkNext("=") {
+		// 	// log.Println("id=, enter Assign")
+		// 	stmt, err = p.parseAssign()
+		// } else
+		if p.checkCur("while") {
+			// log.Println("while, enter while")
 			stmt, err = p.parseWhile()
 		} else if p.checkCur("if") {
-			log.Println("if, enter if")
+			// log.Println("if, enter if")
 			stmt, err = p.parseIf()
 		} else {
-			log.Println("id, enter Expression")
+			// log.Println("id, enter Expression")
 			stmt, err = p.parseExpression(LOWEST)
 		}
 	case NumToken:
-		log.Println("number, enter Expression")
+		// log.Println("number, enter Expression")
 		stmt, err = p.parseExpression(LOWEST)
 	case OpToken:
-		log.Println("operator, enter Expression")
+		// log.Println("operator, enter Expression")
 		stmt, err = p.parseExpression(LOWEST)
 	default:
 		log.Println("no match for ", p.cur.GetType(), p.cur)
@@ -182,7 +185,7 @@ func (p *Parser) parseInfixExpression(left ASTNode) (ASTNode, error) {
 	return &Expression{ASTList: expr}, nil
 }
 func (p *Parser) parseTernary(condition ASTNode) (ASTNode, error) {
-	log.Println("Now I am in Ternary?")
+	// log.Println("Now I am in Ternary?")
 	p.skip("?")
 	ternary := ASTList{}
 	ternary.addChild(condition)
@@ -267,11 +270,11 @@ func (p *Parser) parseWhile() (ASTNode, error) {
 }
 
 func (p *Parser) parseBlock() (ASTNode, error) {
-	log.Println("block!\t")
+	// log.Println("block!\t")
 	p.skip("{")
 	block := &ASTList{}
 	for p.cur.GetText() != "}" {
-		log.Println("cur and next are ", p.cur, p.next)
+		// log.Println("cur and next are ", p.cur, p.next)
 
 		if p.cur == EOL {
 			p.advance()
@@ -284,7 +287,7 @@ func (p *Parser) parseBlock() (ASTNode, error) {
 			return nil, err
 		}
 		// debug
-		log.Println(p.lexer.lineNo, "th line : ", stmt.String())
+		// log.Println(p.lexer.lineNo, "th line : ", stmt.String())
 		// advance
 		p.advance()
 		block.addChild(stmt)
@@ -317,7 +320,7 @@ func (p *Parser) skip(s string) {
 	if p.checkCur(s) {
 		p.advance()
 	} else {
-		log.Fatalln(p.lexer.lineNo, "th line", "expect ", s, "got", p.cur.GetText(), "----- the cur and next are", p.cur, p.next)
+		// log.Fatalln(p.lexer.lineNo, "th line", "expect ", s, "got", p.cur.GetText(), "----- the cur and next are", p.cur, p.next)
 	}
 }
 

@@ -3,7 +3,6 @@ package interpreter
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -57,13 +56,13 @@ func NewEnvironment() *Environment {
 	return &Environment{store: make(map[string]Object)}
 }
 func (e *Environment) Get(name string) Object {
-	defer func() {
-		log.Println("the environment is ------->\t")
-		for k, v := range e.store {
-			log.Println(k, v)
-		}
-		log.Println("")
-	}()
+	// defer func() {
+	// 	log.Println("the environment is ------->\t")
+	// 	for k, v := range e.store {
+	// 		log.Println(k, v)
+	// 	}
+	// 	log.Println("")
+	// }()
 
 	obj, ok := e.store[name]
 	if !ok {

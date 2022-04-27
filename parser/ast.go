@@ -99,7 +99,7 @@ func (be Expression) right() ASTNode {
 	return be.child(1)
 }
 func (be Expression) String() string {
-	return "(" + be.child(0).String() + be.Token.GetText() + be.child(1).String() + ")"
+	return "Expression" + "(" + be.child(0).String() + be.Token.GetText() + be.child(1).String() + ")"
 }
 
 // ================== AssignStatement
@@ -116,7 +116,7 @@ func (as AssignStatement) value() ASTNode {
 }
 
 func (as AssignStatement) String() string {
-	return "(" + as.child(0).String() + "=" + as.child(1).String() + ")"
+	return "AssignStatement" + "(" + as.child(0).String() + "=" + as.child(1).String() + ")"
 }
 
 // ================= If Statement
@@ -154,6 +154,10 @@ func (is IfStatement) String() string {
 // ================= Ternary Statement
 type TernaryStatement struct {
 	ASTList
+}
+
+func (ts TernaryStatement) String() string {
+	return "Ternary" + "(" + ts.child(0).String() + " ? " + ts.child(1).String() + ":" + ts.child(2).String() + ")"
 }
 
 // ================= While Statement

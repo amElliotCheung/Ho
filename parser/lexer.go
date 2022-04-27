@@ -33,7 +33,7 @@ func (l *Lexer) Readline() {
 	if l.scanner.Scan() {
 		line = l.scanner.Text()
 		l.lineNo += 1
-		//log.Printf("%v--%v", line, line[len(line)-1]) // output
+		//// log.Printf("%v--%v", line, line[len(line)-1]) // output
 	} else {
 		l.hasMore = false
 		return
@@ -53,7 +53,7 @@ func (l *Lexer) Readline() {
 
 func (l *Lexer) fillQueue(i int) bool {
 	for i >= len(l.queue) {
-		if l.hasMore == false {
+		if !l.hasMore {
 			return false
 		}
 		l.Readline()
@@ -62,7 +62,7 @@ func (l *Lexer) fillQueue(i int) bool {
 }
 
 func (l *Lexer) Peek(i int) Token {
-	if l.fillQueue(i) == false {
+	if !l.fillQueue(i) {
 		return EOF
 	}
 	return l.queue[i]
@@ -83,7 +83,7 @@ func (l *Lexer) AddToken(str string) {
 	m1 := matches[1] // the first par match
 
 	// for i, m := range matches {
-	// 	log.Println("matches : ", i, m)
+	// 	// log.Println("matches : ", i, m)
 	// }
 	if m1 == "" || matches[2] != "" { // empty or \n or comment
 		return
@@ -100,7 +100,7 @@ func (l *Lexer) AddToken(str string) {
 		tk = NewOpToken(l.lineNo, m1)
 	}
 	l.queue = append(l.queue, tk)
-	// log.Printf("add %T type token", tk)
+	// // log.Printf("add %T type token", tk)
 }
 
 func (l *Lexer) toStringLiteral(s string) string {
