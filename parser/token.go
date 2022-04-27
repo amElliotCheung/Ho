@@ -42,9 +42,10 @@ const (
 
 type Token interface {
 	GetLineNumber() int
-	// IsIdentifier() bool
-	// IsNumber() bool
-	// IsString() bool
+	IsOperator() bool
+	IsIdentifier() bool
+	IsNumber() bool
+	IsString() bool
 	GetNumber() int
 	GetText() string
 	GetType() string
@@ -65,17 +66,20 @@ func (t BaseToken) GetType() string {
 	return ""
 }
 
-// func (t BaseToken) IsIdentifier() bool {
-// 	return false
-// }
+func (t BaseToken) IsIdentifier() bool {
+	return false
+}
 
-// func (t BaseToken) IsNumber() bool {
-// 	return false
-// }
+func (t BaseToken) IsNumber() bool {
+	return false
+}
 
-// func (t BaseToken) IsString() bool {
-// 	return false
-// }
+func (t BaseToken) IsString() bool {
+	return false
+}
+func (t BaseToken) IsOperator() bool {
+	return false
+}
 
 func (t BaseToken) GetNumber() int {
 	panic("not a number!")
@@ -98,9 +102,9 @@ func NewNumToken(lineNo, val int) NumToken {
 	}
 }
 
-// func (t NumToken) IsNumber() bool {
-// 	return true
-// }
+func (t NumToken) IsNumber() bool {
+	return true
+}
 
 func (t NumToken) GetType() string {
 	return "INT"
@@ -181,4 +185,8 @@ func (o OpToken) GetText() string {
 
 func (o OpToken) GetType() string {
 	return o.op
+}
+
+func (o OpToken) IsOperator() bool {
+	return true
 }

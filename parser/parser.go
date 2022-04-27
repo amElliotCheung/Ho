@@ -65,7 +65,7 @@ func NewParser(l *Lexer) *Parser {
 func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 	prog := &ASTList{}
 	for p.cur != EOF {
-		log.Println("parse : cur and next are ", p.cur, p.next)
+		// log.Println("parse : cur and next are ", p.cur, p.next)
 		if p.cur == EOL {
 			p.advance()
 			continue
@@ -131,7 +131,12 @@ func (p *Parser) parseAssign() (ASTNode, error) {
 	return &AssignStatement{ASTList: assign}, nil
 }
 func (p *Parser) parseExpression(precedence int) (ASTNode, error) {
-	parser, ok := p.prefixParser[p.cur.GetType()]
+	t := p.cur.GetType()
+	if t == "OP" {
+		t = p.cur.GetText()
+	}
+
+	parser, ok := p.prefixParser[t]
 	if !ok {
 		return nil, fmt.Errorf("no prefix function for %v", p.cur.GetType())
 	}
@@ -168,16 +173,19 @@ func (p *Parser) parseInfixExpression(left ASTNode) (ASTNode, error) {
 	}
 	expr.addChild(right)
 
-	return &BinaryExpr{ASTList: expr}, nil
+	return &Expression{ASTList: expr}, nil
 }
 
 func (p *Parser) parseIf() (ASTNode, error) {
+
 	node := ASTList{Token: p.cur}
 	p.advance()
+
 	expr, err := p.parseExpression(LOWEST)
 	if err != nil {
 		return nil, err
 	}
+
 	p.advance()
 	block, err := p.parseBlock()
 	if err != nil {
@@ -207,7 +215,7 @@ func (p *Parser) parseIf() (ASTNode, error) {
 			if err != nil {
 				return nil, err
 			}
-			node.addChild(&ASTLeaf{Token: NewIdToken(p.lexer.lineNo, "true")}) // true condition
+			node.addChild(&ASTLeaf{Token: NewNumToken(p.lexer.lineNo, 1)}) // true condition
 			node.addChild(block)
 		}
 	}
@@ -233,6 +241,7 @@ func (p *Parser) parseWhile() (ASTNode, error) {
 }
 
 func (p *Parser) parseBlock() (ASTNode, error) {
+	log.Println("block!\t")
 	p.skip("{")
 	block := &ASTList{}
 	for p.cur.GetText() != "}" {

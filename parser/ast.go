@@ -92,22 +92,22 @@ func (l *ASTList) addChild(node ASTNode) {
 	l.nodes = append(l.nodes, node)
 }
 
-// ================== BinaryExpr
-type BinaryExpr struct {
+// ================== Expression
+type Expression struct {
 	ASTList
 }
 
-func (be BinaryExpr) left() ASTNode {
+func (be Expression) left() ASTNode {
 	return be.child(0)
 }
-func (be BinaryExpr) operator() string {
+func (be Expression) operator() string {
 	// later
-	return be.Token.GetType()
+	return be.Token.GetText()
 }
-func (be BinaryExpr) right() ASTNode {
+func (be Expression) right() ASTNode {
 	return be.child(1)
 }
-func (be BinaryExpr) String() string {
+func (be Expression) String() string {
 	return "(" + be.child(0).String() + be.Token.GetText() + be.child(1).String() + ")"
 }
 

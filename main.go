@@ -6,19 +6,18 @@ import (
 	interpreter "stone/parser"
 )
 
-const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|<|<=|>|>=|&&|\|\||\\n|[[:punct:]]))?`
+const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|!=|<|<=|>|>=|&&|\|\||\\n|[[:punct:]]))?`
 
 func main() {
 	log.SetFlags(0) // no prefix
-	filename := "./sourcecode.txt"
-	// lexer_text(filename)
-	// lexer_text("./sourcecode.txt")
-	parser_text(filename)
-	// evaluater_text(filename)
+	// lexer_test(filename)
+	// lexer_test("./sourcecode.txt")
+	// parser_test("./sourcecode.txt")
+	evaluater_test("./evaluation.txt")
 }
 
 //================== test lexer
-func lexer_text(filename string) {
+func lexer_test(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Println(err)
@@ -31,7 +30,7 @@ func lexer_text(filename string) {
 	}
 }
 
-func parser_text(filename string) {
+func parser_test(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Println(err)
@@ -52,17 +51,19 @@ func parser_text(filename string) {
 
 }
 
-// func evaluater_text(filename string) {
-// 	file, err := os.Open(filename)
-// 	if err != nil {
-// 		log.Println(err)
-// 	}
-// 	defer file.Close()
+func evaluater_test(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Println(err)
+	}
+	defer file.Close()
 
-// 	lexer := interpreter.NewLexer(file, regexPat)
-// 	parser := interpreter.NewParser(lexer)
-// 	c := make(chan interpreter.ASTNode)
-// 	parser.Parse(c)
-// 	evaluater := interpreter.NewEvaluater(c)
-// 	evaluater.Eval()
-// }
+	lexer := interpreter.NewLexer(file, regexPat)
+	parser := interpreter.NewParser(lexer)
+	c := make(chan interpreter.ASTNode)
+	go parser.Parse(c)
+	evaluater := interpreter.NewEvaluater(c)
+	result := evaluater.Eval()
+	log.Println("=============  evaluater final result  ============")
+	log.Println("-- ", result.Type(), result.Inspect(), "--")
+}
