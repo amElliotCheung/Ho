@@ -46,15 +46,6 @@ func (number NumberLiteral) value() int {
 	return number.ASTLeaf.GetNumber()
 }
 
-// ==================== Name
-type Name struct {
-	ASTLeaf
-}
-
-func (name Name) name() string {
-	return name.ASTLeaf.GetText()
-}
-
 // ==================== ASTList
 type ASTList struct {
 	Token
@@ -125,7 +116,7 @@ func (as AssignStatement) value() ASTNode {
 }
 
 func (as AssignStatement) String() string {
-	return "(" + as.child(0).String() + as.Token.GetText() + as.child(1).String() + ")"
+	return "(" + as.child(0).String() + "=" + as.child(1).String() + ")"
 }
 
 // ================= If Statement
@@ -160,6 +151,11 @@ func (is IfStatement) String() string {
 	return out.String()
 }
 
+// ================= Ternary Statement
+type TernaryStatement struct {
+	ASTList
+}
+
 // ================= While Statement
 type WhileStatement struct {
 	ASTList
@@ -174,5 +170,23 @@ func (ws WhileStatement) block() ASTNode {
 }
 
 func (ws WhileStatement) String() string {
+	return "(" + ws.Token.GetText() + " " + ws.child(0).String() + " do " + ws.child(1).String() + ")"
+}
+
+// ================= func Statement
+type FuncStatement struct {
+	parameters []*IdToken
+	ASTList
+}
+
+func (ws FuncStatement) condition() ASTNode {
+	return ws.child(0)
+}
+
+func (ws FuncStatement) block() ASTNode {
+	return ws.child(1)
+}
+
+func (ws FuncStatement) String() string {
 	return "(" + ws.Token.GetText() + " " + ws.child(0).String() + " do " + ws.child(1).String() + ")"
 }

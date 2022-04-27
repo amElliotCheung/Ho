@@ -8,13 +8,14 @@ import (
 const (
 	_ int = iota
 	LOWEST
-	EQUALS      // ==
-	LESSGREATER // > or <
-	SUM         // +
-	PRODUCT     // *
-	PREFIX      // -X or !X
-	CALL        // myFunction(X)
-	INDEX       // array[index]
+	QUESTIONMARK // ? :
+	EQUALS       // ==
+	LESSGREATER  // > or <
+	SUM          // +
+	PRODUCT      // *
+	PREFIX       // -X or !X
+	CALL         // myFunction(X)
+	INDEX        // array[index]
 )
 
 var precedences = map[string]int{
@@ -28,6 +29,8 @@ var precedences = map[string]int{
 	"%":  PRODUCT,
 	"*":  PRODUCT,
 	"(":  CALL,
+	// "?":  CALL,
+	"?": QUESTIONMARK,
 }
 
 type (
@@ -56,6 +59,7 @@ func NewParser(l *Lexer) *Parser {
 	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, LT, GT, EQ, NEQ, MOD} {
 		p.infixParser[op] = p.parseInfixExpression
 	}
+	p.infixParser["?"] = p.parseTernary
 
 	p.advance()
 	return p
@@ -79,9 +83,15 @@ func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 		// advance
 		p.advance()
 		prog.addChild(stmt)
-		res <- stmt
+		if res != nil {
+			res <- stmt
+		}
+
 	}
-	close(res)
+	if res != nil {
+		close(res)
+	}
+
 	return prog, nil
 }
 func (p *Parser) parseStatement() (ASTNode, error) {
@@ -89,6 +99,7 @@ func (p *Parser) parseStatement() (ASTNode, error) {
 	var err error
 	switch p.cur.(type) {
 	case IdToken:
+		log.Println("- - - - ", p.cur, "- - - - - - - ", p.next)
 		if p.checkNext("=") {
 			log.Println("id=, enter Assign")
 			stmt, err = p.parseAssign()
@@ -118,7 +129,7 @@ func (p *Parser) parseStatement() (ASTNode, error) {
 	return stmt, nil
 }
 func (p *Parser) parseAssign() (ASTNode, error) {
-	assign := ASTList{Token: p.next}        // =
+	assign := ASTList{}                     // =
 	assign.addChild(&ASTLeaf{Token: p.cur}) // identifier
 	p.advance()
 	p.skip("=")
@@ -131,16 +142,11 @@ func (p *Parser) parseAssign() (ASTNode, error) {
 	return &AssignStatement{ASTList: assign}, nil
 }
 func (p *Parser) parseExpression(precedence int) (ASTNode, error) {
-	t := p.cur.GetType()
-	if t == "OP" {
-		t = p.cur.GetText()
-	}
-
-	parser, ok := p.prefixParser[t]
+	parser, ok := p.prefixParser[p.cur.GetType()]
 	if !ok {
 		return nil, fmt.Errorf("no prefix function for %v", p.cur.GetType())
 	}
-	left, _ := parser() // ASTNode, error
+	left, _ := parser() // ASTNode, error. Usually ASTLeaf
 	for p.next != EOL && precedence < p.peekPrecedence() {
 		infix, ok := p.infixParser[p.next.GetType()]
 		if !ok {
@@ -174,6 +180,26 @@ func (p *Parser) parseInfixExpression(left ASTNode) (ASTNode, error) {
 	expr.addChild(right)
 
 	return &Expression{ASTList: expr}, nil
+}
+func (p *Parser) parseTernary(condition ASTNode) (ASTNode, error) {
+	log.Println("Now I am in Ternary?")
+	p.skip("?")
+	ternary := ASTList{}
+	ternary.addChild(condition)
+	expr, err := p.parseExpression(LOWEST)
+	if err != nil {
+		return nil, err
+	}
+	ternary.addChild(expr)
+	p.advance()
+	p.skip(":")
+	expr, err = p.parseExpression(LOWEST)
+	if err != nil {
+		return nil, err
+	}
+	ternary.addChild(expr)
+
+	return &TernaryStatement{ASTList: ternary}, nil
 }
 
 func (p *Parser) parseIf() (ASTNode, error) {
@@ -291,7 +317,7 @@ func (p *Parser) skip(s string) {
 	if p.checkCur(s) {
 		p.advance()
 	} else {
-		log.Fatalln(p.lexer.lineNo, "expect ", s, "got", p.cur.GetText())
+		log.Fatalln(p.lexer.lineNo, "th line", "expect ", s, "got", p.cur.GetText(), "----- the cur and next are", p.cur, p.next)
 	}
 }
 

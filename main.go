@@ -6,14 +6,16 @@ import (
 	interpreter "stone/parser"
 )
 
-const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|!=|<|<=|>|>=|&&|\|\||\\n|[[:punct:]]))?`
+const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|!=|<|<=|>|>=|&&|\|\||\\n|\?|:|[[:punct:]]))?`
 
 func main() {
 	log.SetFlags(0) // no prefix
 	// lexer_test(filename)
 	// lexer_test("./sourcecode.txt")
 	// parser_test("./sourcecode.txt")
-	evaluater_test("./evaluation.txt")
+	// go evaluater_test("./evaluation.txt")
+	evaluater_test("./fact.txt")
+
 }
 
 //================== test lexer
@@ -40,13 +42,11 @@ func parser_test(filename string) {
 	lexer := interpreter.NewLexer(file, regexPat)
 	parser := interpreter.NewParser(lexer)
 
-	c := make(chan interpreter.ASTNode)
-	go parser.Parse(c)
+	root, err := parser.Parse(nil)
 	if err != nil {
 		log.Println("error:\t", err)
-	}
-	for item := range c {
-		log.Println("receive item from channel : ", item)
+	} else {
+		log.Println(root)
 	}
 
 }

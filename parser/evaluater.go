@@ -18,7 +18,7 @@ func (e *Evaluater) Eval() Object {
 	var result Object
 	debugs := make([]Object, 0)
 	for node := range e.c {
-		log.Println("receive item from channel ===========>>>> ", node)
+		log.Printf("receive item from channel ===========>> %T  , %v", node, node)
 		result = e.evalStatement(node)
 		debugs = append(debugs, result)
 	}
@@ -36,7 +36,11 @@ func (e *Evaluater) evalStatement(node ASTNode) Object {
 	case *ASTLeaf: // just a token. Identifier or number
 		log.Println("evaluater ---> integer")
 		leaf, _ := node.(*ASTLeaf)
-		result = &Integer{Value: leaf.GetNumber()}
+		if leaf.IsNumber() {
+			result = &Integer{Value: leaf.GetNumber()}
+		} else if leaf.IsIdentifier() {
+			result = e.environment.Get(leaf.GetText())
+		}
 	case *Expression:
 		log.Println("evaluater ---> expression")
 		result = e.evalExpr(node)
@@ -47,8 +51,11 @@ func (e *Evaluater) evalStatement(node ASTNode) Object {
 		log.Println("evaluater ---> assign")
 		result = e.evalAssign(node)
 	case *WhileStatement:
-		log.Println("evaluater ---> while")
+		log.Println("evaluater ---> While")
 		result = e.evalWhile(node)
+	case *TernaryStatement:
+		log.Println("evaluater ---> Ternary")
+		result = e.evalTernary(node)
 	}
 	return result
 }
@@ -120,6 +127,13 @@ func (e *Evaluater) evalIf(node ASTNode) Object {
 		}
 	}
 	return &Integer{Value: 0}
+}
+
+func (e *Evaluater) evalTernary(node ASTNode) Object {
+	if e.isTure(node.child(0)) {
+		return e.evalExpr(node.child(1))
+	}
+	return e.evalExpr(node.child(2))
 }
 
 func (e *Evaluater) evalBlock(node ASTNode) Object {
