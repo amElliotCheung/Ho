@@ -61,6 +61,12 @@ func (e *Evaluater) evalStatement(node ASTNode) Object {
 }
 
 func (e *Evaluater) evalExpr(node ASTNode) Object {
+	// if ternary
+	if _, isTernary := node.(*TernaryStatement); isTernary {
+		log.Println("evaluater ----> it's ternary")
+		return e.evalTernary(node)
+	}
+
 	// if leaf
 
 	if leaf, isLeaf := node.(*ASTLeaf); isLeaf {

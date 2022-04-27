@@ -15,6 +15,7 @@ func main() {
 	// parser_test("./sourcecode.txt")
 	// go evaluater_test("./evaluation.txt")
 	evaluater_test("./fact.txt")
+	evaluater_test("./ternary.txt")
 
 }
 
