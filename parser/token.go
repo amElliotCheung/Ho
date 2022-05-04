@@ -1,14 +1,13 @@
 package interpreter
 
-import "strconv"
-
 const (
 	// Identifiers + literals
-	IDENT  = "IDENT"  // add, foobar, x, y, ...
-	INT    = "INT"    // 1343456
-	STRING = "STRING" // "foobar"
+	IDENTIFIER = "IDENTIFIER" // add, x, y, ...
+	INTEGER    = "INTEGER"    // 1343456
+	STRING     = "STRING"     // "foobar"
 
 	// Operators
+	OPERATOR = "OPERATOR"
 	ASSIGN   = "="
 	PLUS     = "+"
 	MINUS    = "-"
@@ -17,8 +16,10 @@ const (
 	SLASH    = "/"
 	MOD      = "%"
 
-	LT = "<"
-	GT = ">"
+	LT  = "<"
+	GT  = ">"
+	LTE = "<="
+	GTE = ">="
 
 	EQ  = "=="
 	NEQ = "!="
@@ -29,164 +30,129 @@ const (
 	RBRACE   = "}"
 	LBRACKET = "["
 	RBRACKET = "]"
+	COMMA    = ","
 
 	// Keywords
-	FUNCTION = "FUNCTION"
-	LET      = "LET"
-	TRUE     = "TRUE"
-	FALSE    = "FALSE"
-	IF       = "IF"
-	ELSE     = "ELSE"
-	RETURN   = "RETURN"
+	RESERVED = "RESERVED"
+	FUNCTION = "func"
+	IF       = "if"
+	ELSE     = "else"
+	WHILE    = "while"
 )
 
 type Token interface {
-	GetLineNumber() int
-	IsOperator() bool
-	IsIdentifier() bool
-	IsNumber() bool
-	IsString() bool
-	GetNumber() int
-	GetText() string
-	GetType() string
+	LineNumber() int
+	Type() string
+	Literal() string
 }
 
-var EOF = BaseToken{lineNumber: -1}
-var EOL = NewStrToken(0, "\\n")
+var EOF = helperToken{BaseToken{lineNumber: -1, literal: "EOF"}}
+var EOL = helperToken{BaseToken{lineNumber: 0, literal: "EOL"}}
 
 type BaseToken struct {
 	lineNumber int
+	literal    string
 }
 
-func (t BaseToken) GetLineNumber() int {
+func (t BaseToken) LineNumber() int {
 	return t.lineNumber
 }
 
-func (t BaseToken) GetType() string {
-	return ""
-}
-
-func (t BaseToken) IsIdentifier() bool {
-	return false
-}
-
-func (t BaseToken) IsNumber() bool {
-	return false
-}
-
-func (t BaseToken) IsString() bool {
-	return false
-}
-func (t BaseToken) IsOperator() bool {
-	return false
-}
-
-func (t BaseToken) GetNumber() int {
-	panic("not a number!")
-}
-
-func (t BaseToken) GetText() string {
-	return ""
-}
-
-// ========================== Numer
-type NumToken struct {
-	BaseToken
-	value int
-}
-
-func NewNumToken(lineNo, val int) NumToken {
-	return NumToken{
-		BaseToken: BaseToken{lineNumber: lineNo},
-		value:     val,
-	}
-}
-
-func (t NumToken) IsNumber() bool {
-	return true
-}
-
-func (t NumToken) GetType() string {
-	return "INT"
-}
-
-func (t NumToken) GetNumber() int {
-	return t.value
-}
-
-func (t NumToken) GetText() string {
-	return strconv.Itoa(t.value)
+func (t BaseToken) Literal() string {
+	return t.literal
 }
 
 // ===================== Identifier
 type IdToken struct {
 	BaseToken
-	text string
 }
 
-func NewIdToken(lineNo int, text string) IdToken {
-	return IdToken{
-		BaseToken: BaseToken{lineNumber: lineNo},
-		text:      text,
+func (i IdToken) Type() string {
+	return IDENTIFIER
+}
+
+func NewIdToken(lineNo int, literal string) *IdToken {
+	return &IdToken{
+		BaseToken: BaseToken{
+			lineNumber: lineNo,
+			literal:    literal,
+		},
 	}
 }
-func (t IdToken) IsIdentifier() bool {
-	return true
+
+// ========================== Numer
+type NumToken struct {
+	BaseToken
 }
 
-func (t IdToken) GetText() string {
-	return t.text
+func NewNumToken(lineNo int, literal string) *NumToken {
+	return &NumToken{
+		BaseToken: BaseToken{
+			lineNumber: lineNo,
+			literal:    literal,
+		},
+	}
 }
 
-func (t IdToken) GetType() string {
-	return "IDENT"
+func (n NumToken) Type() string {
+	return INTEGER
 }
 
 // =========================== string
 type StrToken struct {
 	BaseToken
-	literal string
 }
 
-func NewStrToken(lineNo int, str string) StrToken {
-	return StrToken{
-		BaseToken: BaseToken{lineNumber: lineNo},
-		literal:   str,
+func NewStrToken(lineNo int, literal string) *StrToken {
+	return &StrToken{
+		BaseToken: BaseToken{
+			lineNumber: lineNo,
+			literal:    literal,
+		},
 	}
 }
-func (t StrToken) IsString() bool {
-	return true
-}
 
-func (t StrToken) GetText() string {
-	return t.literal
-}
-
-func (t StrToken) GetType() string {
-	return "STRING"
+func (s StrToken) Type() string {
+	return STRING
 }
 
 // =========================== Operator
 type OpToken struct {
 	BaseToken
-	op string
 }
 
-func NewOpToken(lineNo int, str string) OpToken {
-	return OpToken{
-		BaseToken: BaseToken{lineNumber: lineNo},
-		op:        str,
+func NewOpToken(lineNo int, literal string) *OpToken {
+	return &OpToken{
+		BaseToken: BaseToken{lineNumber: lineNo,
+			literal: literal},
 	}
 }
 
-func (o OpToken) GetText() string {
-	return o.op
+func (o OpToken) Type() string {
+	return OPERATOR
 }
 
-func (o OpToken) GetType() string {
-	return o.op
+// ======== reserved token
+type ReservedToken struct {
+	BaseToken
 }
 
-func (o OpToken) IsOperator() bool {
-	return true
+func NewReservedToken(lineNo int, literal string) *ReservedToken {
+	return &ReservedToken{
+		BaseToken: BaseToken{lineNumber: lineNo,
+			literal: literal},
+	}
+}
+
+func (r ReservedToken) Type() string {
+	return r.Literal()
+}
+
+// ======= helper token
+type helperToken struct {
+	BaseToken
+}
+
+func (r helperToken) Type() string {
+	return "helper"
 }

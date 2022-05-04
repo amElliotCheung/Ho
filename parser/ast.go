@@ -2,149 +2,204 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
+	"strconv"
+	"strings"
 )
+
+//
+//	Interfaces
+//
 
 // ==================== ASTNode Interface
 type ASTNode interface {
-	child(int) ASTNode
-	numChildren() int
-	children() []ASTNode
 	String() string
-	addChild(ASTNode)
 }
 
-// ==================== ASTLeaf
-type ASTLeaf struct {
-	Token
+// ==================== Statement Interface
+type Statement interface {
+	ASTNode
 }
 
-func (leaf ASTLeaf) child(i int) ASTNode {
-	return nil
-}
-func (leaf ASTLeaf) numChildren() int {
-	return 0
-}
-func (leaf ASTLeaf) children() []ASTNode {
-	return nil
+// ====================  Expression Interface
+type Expression interface {
+	ASTNode
 }
 
-func (leaf ASTLeaf) String() string {
-	return leaf.Token.GetText()
+//
+// data types
+//
+type IdentifierLiteral struct {
+	Key string
 }
 
-func (leaf ASTLeaf) addChild(node ASTNode) {
-	panic("a leaf can't have child")
+func (i IdentifierLiteral) String() string {
+	return i.Key
 }
 
 // ==================== NumberLiteral
 type NumberLiteral struct {
-	ASTLeaf
+	Key int
 }
 
-func (number NumberLiteral) value() int {
-	return number.ASTLeaf.GetNumber()
+func (n NumberLiteral) String() string {
+	return strconv.Itoa(n.Key)
 }
 
-// ==================== ASTList
-type ASTList struct {
-	Token
-	nodes []ASTNode
+//	=============== String
+type StringLiteral struct {
+	Key string
 }
 
-func (list ASTList) child(i int) ASTNode {
-	if i < len(list.nodes) {
-		return list.nodes[i]
+func (s StringLiteral) String() string {
+	return s.Key
+}
+
+// ================= array
+type ArrayLiteral struct {
+	Elements []Expression
+}
+
+func (a ArrayLiteral) String() string {
+	var out bytes.Buffer
+	out.WriteString("array")
+	out.WriteString(LBRACE)
+	for i, e := range a.Elements {
+		if i != 0 {
+			out.WriteString(COMMA)
+		}
+		out.WriteString(e.String())
+
 	}
-	return nil
-}
-func (list ASTList) numChildren() int {
-	return len(list.nodes)
-}
-func (list ASTList) children() []ASTNode {
-	return list.nodes
+	out.WriteString(RBRACE)
+	return out.String()
 }
 
-func (list ASTList) String() string {
+// =========== Index Expression
+type IndexExpression struct {
+	Left  Expression
+	Index Expression
+}
+
+func (ie IndexExpression) String() string {
+	return "IndexExpr " + ie.Left.String() + LBRACKET + ie.Index.String() + RBRACKET
+}
+
+// ====== function
+type FunctionLiteral struct {
+	Parameters []*IdentifierLiteral
+	Execute    *BlockExpression
+}
+
+func (f FunctionLiteral) String() string {
+	var out bytes.Buffer
+	out.WriteString("func")
+
+	out.WriteString(LPAREN)
+
+	paras := []string{}
+	for _, p := range f.Parameters {
+		paras = append(paras, p.String())
+	}
+	out.WriteString(strings.Join(paras, ","))
+
+	out.WriteString(RPAREN)
+	out.WriteString(f.Execute.String())
+
+	return out.String()
+
+}
+
+// =========== Call Expression
+type CallExpression struct {
+	Function  Expression // Identifier or FunctionLiteral
+	Arguments []Expression
+}
+
+func (ce CallExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString(ce.Function.String())
+	out.WriteString(LPAREN)
+
+	paras := []string{}
+	for _, arg := range ce.Arguments {
+		paras = append(paras, arg.String())
+	}
+	out.WriteString(strings.Join(paras, ","))
+
+	out.WriteString(RPAREN)
+	return out.String()
+}
+
+// ================== Unary Expression
+type UnaryExpression struct {
+	Operator string
+	Right    Expression
+}
+
+func (ue UnaryExpression) String() string {
+	return "unaryExpression" + ue.Operator + ue.Right.String()
+}
+
+// ================== Infix Expression
+type InfixExpression struct {
+	Operator    string
+	Left, Right Expression
+}
+
+func (ie InfixExpression) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(fmt.Sprintf("I have %d children ==> ", len(list.nodes)))
-	out.WriteString("(")
-
-	for _, node := range list.nodes {
-		out.WriteString(node.String() + " ")
-	}
-	out.WriteString(")")
+	out.WriteString(LPAREN)
+	out.WriteString(ie.Left.String() + ie.Operator + ie.Right.String())
+	out.WriteString(RPAREN)
 
 	return out.String()
 }
 
-func (l *ASTList) addChild(node ASTNode) {
-	l.nodes = append(l.nodes, node)
-}
-
-// ================== Expression
-type Expression struct {
-	ASTList
-}
-
-func (be Expression) left() ASTNode {
-	return be.child(0)
-}
-func (be Expression) operator() string {
-	// later
-	return be.Token.GetText()
-}
-func (be Expression) right() ASTNode {
-	return be.child(1)
-}
-func (be Expression) String() string {
-	return "Expression" + "(" + be.child(0).String() + be.Token.GetText() + be.child(1).String() + ")"
-}
-
 // ================== AssignStatement
-type AssignStatement struct {
-	ASTList
+type AssignExpression struct {
+	Ident *IdentifierLiteral
+	Expr  Expression
 }
 
-func (as AssignStatement) ident() ASTNode {
-	return as.child(0)
+func (ae AssignExpression) String() string {
+	return "(" + ae.Ident.String() + "=" + ae.Expr.String() + ")"
 }
 
-func (as AssignStatement) value() ASTNode {
-	return as.child(1)
+// define
+type DefineExpression struct {
+	Ident *IdentifierLiteral
+	Expr  Expression
 }
 
-func (as AssignStatement) String() string {
-	return "AssignStatement" + "(" + as.child(0).String() + "=" + as.child(1).String() + ")"
+func (de DefineExpression) String() string {
+	return "(" + de.Ident.String() + ":=" + de.Expr.String() + ")"
 }
 
 // ================= If Statement
-type IfStatement struct {
-	ASTList
+type IfExpression struct {
+	conditions []Expression
+	executes   []*BlockExpression
 }
 
-func (is IfStatement) condition(i int) ASTNode {
-	return is.child(2 * i)
+func (ie *IfExpression) addPair(cnd Expression, block *BlockExpression) {
+	ie.conditions = append(ie.conditions, cnd)
+	ie.executes = append(ie.executes, block)
 }
 
-func (is IfStatement) block(i int) ASTNode {
-	return is.child(2*i + 1)
-}
-
-func (is IfStatement) String() string {
+func (ie IfExpression) String() string {
 	var out bytes.Buffer
 
 	out.WriteString("(")
 
-	for i := 0; i < len(is.nodes); i += 2 {
+	for i := range ie.conditions {
 		if i == 0 {
 			out.WriteString("if ")
 		} else {
 			out.WriteString("else if ")
 		}
-		out.WriteString(is.child(i).String())
-		out.WriteString("then " + is.child(i+1).String())
+		out.WriteString(ie.conditions[i].String())
+		out.WriteString(ie.executes[i].String())
 	}
 	out.WriteString(")")
 
@@ -152,45 +207,52 @@ func (is IfStatement) String() string {
 }
 
 // ================= Ternary Statement
-type TernaryStatement struct {
-	ASTList
+type TernaryExpression struct {
+	condition   Expression
+	left, right Expression
 }
 
-func (ts TernaryStatement) String() string {
-	return "Ternary" + "(" + ts.child(0).String() + " ? " + ts.child(1).String() + ":" + ts.child(2).String() + ")"
+func (ts TernaryExpression) String() string {
+	return "Ternary" + "(" + ts.condition.String() + " ? " + ts.left.String() + ":" + ts.right.String() + ")"
 }
 
 // ================= While Statement
-type WhileStatement struct {
-	ASTList
+type WhileExpression struct {
+	Condition Expression
+	Execute   *BlockExpression
 }
 
-func (ws WhileStatement) condition() ASTNode {
-	return ws.child(0)
+func (we WhileExpression) String() string {
+	return "while" + we.Condition.String() + we.Execute.String()
 }
 
-func (ws WhileStatement) block() ASTNode {
-	return ws.child(1)
+type BlockExpression struct {
+	Statements []Statement
 }
 
-func (ws WhileStatement) String() string {
-	return "(" + ws.Token.GetText() + " " + ws.child(0).String() + " do " + ws.child(1).String() + ")"
+func (be BlockExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(LBRACE)
+	for _, s := range be.Statements {
+		out.WriteString(s.String())
+		out.WriteString("\n")
+	}
+	out.WriteString(RBRACE)
+	return out.String()
 }
 
-// ================= func Statement
-type FuncStatement struct {
-	parameters []*IdToken
-	ASTList
+// ==================== Program
+type Program struct {
+	Statements []Statement
 }
 
-func (ws FuncStatement) condition() ASTNode {
-	return ws.child(0)
-}
+func (p Program) String() string {
+	var out bytes.Buffer
 
-func (ws FuncStatement) block() ASTNode {
-	return ws.child(1)
-}
-
-func (ws FuncStatement) String() string {
-	return "(" + ws.Token.GetText() + " " + ws.child(0).String() + " do " + ws.child(1).String() + ")"
+	for _, s := range p.Statements {
+		out.WriteString(s.String())
+		out.WriteString("\n")
+	}
+	return out.String()
 }

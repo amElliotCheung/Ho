@@ -2,14 +2,22 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
+	"strconv"
 	"strings"
+)
+
+const (
+	IDENTIFIER_OBJ = "IDENTIFIER" // add, x, y, ...
+	INTEGER_OBJ    = "INTEGER"    // 1343456
+	STRING_OBJ     = "STRING"     // "foobar"
+	NUMBER_OBJ     = "NUMBER"
+	FUNCTION_OBJ   = "FUNCTION"
+	ARRAY_OBJ      = "ARRAY"
 )
 
 type Object interface {
 	Type() string
-	Inspect() string
-	GetValue() int
+	String() string
 }
 
 // ================ integer
@@ -18,63 +26,22 @@ type Integer struct {
 }
 
 func (i *Integer) Type() string {
-	return "INTEGER"
+	return INTEGER_OBJ
 }
-func (i *Integer) Inspect() string {
-	return fmt.Sprintf("%d", i.Value)
-}
-
-func (i *Integer) GetValue() int {
-	return i.Value
+func (i *Integer) String() string {
+	return strconv.Itoa(i.Value)
 }
 
-//
-//				identifier
-//
-// type Identifier struct {
-// 	Name string
-// }
-
-// func (i *Identifier) Type() string {
-// 	return "IDENTIFIER"
-// }
-// func (i *Identifier) Inspect() string {
-// 	return i.Name
-// }
-
-// func (i *Identifier) GetValue() int {
-// 	return 0
-// }
-
-// ====================== variable environment
-
-type Environment struct {
-	store map[string]Object
+// ================ string
+type String struct {
+	Value string
 }
 
-func NewEnvironment() *Environment {
-	return &Environment{store: make(map[string]Object)}
+func (s String) Type() string {
+	return STRING_OBJ
 }
-func (e *Environment) Get(name string) Object {
-	// defer func() {
-	// 	log.Println("the environment is ------->\t")
-	// 	for k, v := range e.store {
-	// 		log.Println(k, v)
-	// 	}
-	// 	log.Println("")
-	// }()
-
-	obj, ok := e.store[name]
-	if !ok {
-		defaultObject := &Integer{Value: 0}
-		e.store[name] = defaultObject
-		return defaultObject
-	}
-	return obj
-}
-
-func (e *Environment) Set(name string, val Object) {
-	e.store[name] = val
+func (s String) String() string {
+	return s.Value
 }
 
 //
@@ -82,26 +49,48 @@ func (e *Environment) Set(name string, val Object) {
 //
 
 type Function struct {
-	parameters []*IdToken
-	body       ASTNode
+	Parameters []*IdentifierLiteral
+	Body       *BlockExpression
+	Env        *Environment
 }
 
-func (f *Function) Type() string {
-	return "FUNCTION"
-}
-
-func (f *Function) Inspect() string {
+func (f *Function) Type() string { return FUNCTION_OBJ }
+func (f *Function) String() string {
 	var out bytes.Buffer
 
 	params := []string{}
-	for _, p := range f.parameters {
-		params = append(params, p.GetText())
+	for _, p := range f.Parameters {
+		params = append(params, p.String())
 	}
-	out.WriteString("func (")
+
+	out.WriteString("fn")
+	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") {\n")
-	out.WriteString(f.body.String())
+	out.WriteString(f.Body.String())
 	out.WriteString("\n}")
 
+	return out.String()
+}
+
+//	============== Array
+
+type Array struct {
+	Elements []Object
+}
+
+func (a *Array) Type() string {
+	return ARRAY_OBJ
+}
+
+func (a *Array) String() string {
+	var out bytes.Buffer
+	elements := []string{}
+	for _, e := range a.Elements {
+		elements = append(elements, e.String())
+	}
+	out.WriteString(LBRACKET)
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString(RBRACKET)
 	return out.String()
 }

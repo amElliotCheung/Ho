@@ -6,8 +6,10 @@ import (
 	"io"
 	"log"
 	"regexp"
-	"strconv"
 )
+
+// const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|:=|=|!=|>=|<=|<|>|&&|\|\||\\n|\?|:|\[|\]|{|}|,)|[[:punct:]])?`
+const regexPat = `\s*((//.*)|([0-9]+)|("((\\"|\\\\|\\n|[^"])*)")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|:=|=|!=|>=|<=|<|>|&&|\|\||\\n|\?|:|\[|\]|{|}|,|\(|\))|[[:punct:]])?`
 
 type Lexer struct {
 	pat     *regexp.Regexp // regular expression
@@ -79,7 +81,17 @@ func (l *Lexer) Read() Token {
 }
 
 func (l *Lexer) AddToken(str string) {
+
 	matches := l.pat.FindAllStringSubmatch(str, -1)[0]
+	// 2 comment
+	// 3 number
+	// 4 ".."
+	// 5 ..str..
+	// 6 char
+	// 7 identifier
+	// 8 op
+	//
+	//
 	m1 := matches[1] // the first par match
 
 	// for i, m := range matches {
@@ -90,39 +102,46 @@ func (l *Lexer) AddToken(str string) {
 	}
 	var tk Token
 	if matches[3] != "" { // number
-		val, _ := strconv.Atoi(matches[3])
-		tk = NewNumToken(l.lineNo, val)
-	} else if matches[4] != "" { // string
-		tk = NewStrToken(l.lineNo, l.toStringLiteral(matches[4]))
-	} else if matches[6] != "" { // identifier
-		tk = NewIdToken(l.lineNo, matches[6])
-	} else {
-		tk = NewOpToken(l.lineNo, m1)
+		tk = NewNumToken(l.lineNo, matches[3])
+	} else if matches[5] != "" { // string
+		// tk = NewStrToken(l.lineNo, matches[5])
+		tk = NewStrToken(l.lineNo, l.toStringLiteral(matches[5]))
+	} else if matches[7] != "" { // identifier
+		for _, reserved := range []string{IF, WHILE, FUNCTION} {
+			if matches[7] == reserved {
+				tk = NewReservedToken(l.lineNo, reserved)
+				goto Add
+			}
+		}
+		tk = NewIdToken(l.lineNo, matches[7])
+	} else if matches[8] != "" {
+		tk = NewOpToken(l.lineNo, matches[8])
 	}
+Add:
 	l.queue = append(l.queue, tk)
 	// // log.Printf("add %T type token", tk)
 }
 
 func (l *Lexer) toStringLiteral(s string) string {
-	return fmt.Sprint("%s", s)
+	return fmt.Sprintf("%s", s)
 }
 
-// a helper function to debug
-func (l *Lexer) ShowQueue() {
-	for _, item := range l.queue {
-		if item != nil {
-			switch v := item.(type) {
-			case NumToken:
-				fmt.Printf("Number: %v\n", v.GetText())
-			case StrToken:
-				fmt.Printf("String: %v\n", v.GetText())
-			case IdToken:
-				fmt.Printf("Ident: %v\n", v.GetText())
-			default:
-				// And here I'm feeling dumb. ;)
-				fmt.Printf("I don't know, ask stackoverflow.")
-			}
+// // a helper function to debug
+// func (l *Lexer) ShowQueue() {
+// 	for _, item := range l.queue {
+// 		if item != nil {
+// 			switch v := item.(type) {
+// 			case NumToken:
+// 				fmt.Printf("Number: %v\n", v.GetText())
+// 			case StrToken:
+// 				fmt.Printf("String: %v\n", v.GetText())
+// 			case IdToken:
+// 				fmt.Printf("Ident: %v\n", v.GetText())
+// 			default:
+// 				// And here I'm feeling dumb. ;)
+// 				fmt.Printf("I don't know, ask stackoverflow.")
+// 			}
 
-		}
-	}
-}
+// 		}
+// 	}
+// }

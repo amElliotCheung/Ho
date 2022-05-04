@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"log"
+	"strconv"
 )
 
 const (
@@ -24,20 +25,22 @@ var precedences = map[string]int{
 	"!=": EQUALS,
 	"<":  LESSGREATER,
 	">":  LESSGREATER,
+	"<=": LESSGREATER,
+	">=": LESSGREATER,
 	"+":  SUM,
 	"-":  SUM,
 	"/":  PRODUCT,
 	"%":  PRODUCT,
 	"*":  PRODUCT,
 	"(":  CALL,
-	// "?":  CALL,
-	"?": QUESTIONMARK,
-	"=": ASSIGNPRE,
+	"?":  QUESTIONMARK,
+	"=":  ASSIGNPRE,
+	"[":  INDEX,
 }
 
 type (
-	prefixParseFn func() (ASTNode, error)
-	infixParseFn  func(ASTNode) (ASTNode, error)
+	prefixParseFn func() (Expression, error)
+	infixParseFn  func(Expression) (Expression, error)
 )
 
 type Parser struct {
@@ -55,21 +58,29 @@ func NewParser(l *Lexer) *Parser {
 		infixParser:  make(map[string]infixParseFn),
 	}
 
-	p.prefixParser[IDENT] = p.parseIdentifier
-	p.prefixParser[INT] = p.parseInteger
+	p.prefixParser[IDENTIFIER] = p.parseIdentifier
+	p.prefixParser[INTEGER] = p.parseInteger
+	p.prefixParser[STRING] = p.parseString
+	p.prefixParser[LBRACKET] = p.parseArray
 	p.prefixParser[LPAREN] = p.parseGroupedExpression
-	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, LT, GT, EQ, NEQ, MOD, ASSIGN} {
+	p.prefixParser[BANG] = p.parseUnaryExpression
+	p.prefixParser[MINUS] = p.parseUnaryExpression
+	p.prefixParser[FUNCTION] = p.parseFunction
+
+	for _, op := range []string{PLUS, MINUS, SLASH, ASTERISK, LT, GT, LTE, GTE, EQ, NEQ, MOD, ASSIGN} {
 		p.infixParser[op] = p.parseInfixExpression
 	}
-	p.infixParser["?"] = p.parseTernary
 
+	p.infixParser["?"] = p.parseTernaryExpression
+	p.infixParser[LPAREN] = p.parseCallExpression
+	p.infixParser[LBRACKET] = p.parseIndexExpression
 	p.advance()
 	return p
 }
 
 // ================== parse functions
-func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
-	prog := &ASTList{}
+func (p *Parser) Parse(res chan Statement) (ASTNode, error) {
+	prog := &Program{}
 	for p.cur != EOF {
 		// // log.Println("parse : cur and next are ", p.cur, p.next)
 		if p.cur == EOL {
@@ -84,7 +95,7 @@ func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 		// log.Println("parse : ", p.lexer.lineNo, "th line : ", stmt.String())
 		// advance
 		p.advance()
-		prog.addChild(stmt)
+		prog.Statements = append(prog.Statements, stmt)
 		if res != nil {
 			res <- stmt
 		}
@@ -96,34 +107,13 @@ func (p *Parser) Parse(res chan ASTNode) (ASTNode, error) {
 
 	return prog, nil
 }
-func (p *Parser) parseStatement() (ASTNode, error) {
-	var stmt ASTNode
+func (p *Parser) parseStatement() (Statement, error) {
+	var stmt Statement
 	var err error
-	switch p.cur.(type) {
-	case IdToken:
-		// log.Println("- - - - ", p.cur, "- - - - - - - ", p.next)
-		// if p.checkNext("=") {
-		// 	// log.Println("id=, enter Assign")
-		// 	stmt, err = p.parseAssign()
-		// } else
-		if p.checkCur("while") {
-			// log.Println("while, enter while")
-			stmt, err = p.parseWhile()
-		} else if p.checkCur("if") {
-			// log.Println("if, enter if")
-			stmt, err = p.parseIf()
-		} else {
-			// log.Println("id, enter Expression")
-			stmt, err = p.parseExpression(LOWEST)
-		}
-	case NumToken:
-		// log.Println("number, enter Expression")
-		stmt, err = p.parseExpression(LOWEST)
-	case OpToken:
-		// log.Println("operator, enter Expression")
-		stmt, err = p.parseExpression(LOWEST)
+
+	switch p.cur.Literal() {
 	default:
-		log.Println("no match for ", p.cur.GetType(), p.cur)
+		stmt, err = p.parseExpressionStatement()
 	}
 
 	if err != nil {
@@ -131,149 +121,100 @@ func (p *Parser) parseStatement() (ASTNode, error) {
 	}
 	return stmt, nil
 }
-func (p *Parser) parseAssign() (ASTNode, error) {
-	assign := ASTList{}                     // =
-	assign.addChild(&ASTLeaf{Token: p.cur}) // identifier
+
+func (p *Parser) parseExpressionStatement() (Expression, error) {
+	switch p.cur.Literal() {
+	case "while":
+		return p.parseWhileExpression()
+	case "if":
+		return p.parseIfExpression()
+	default:
+		switch p.next.Literal() {
+		case ":=":
+			return p.parseDefineExpression()
+		case "=":
+			return p.parseAssignExpression()
+		default:
+			return p.parseExpression(LOWEST)
+		}
+
+	}
+}
+func (p *Parser) parseDefineExpression() (Expression, error) {
+	ds := &DefineExpression{}                           // =
+	ds.Ident = &IdentifierLiteral{Key: p.cur.Literal()} // identifier
+	p.advance()
+	p.skip(":=")
+
+	ds.Expr, _ = p.parseExpression(LOWEST) //
+	return ds, nil
+}
+func (p *Parser) parseAssignExpression() (Expression, error) {
+	assign := &AssignExpression{}                           // =
+	assign.Ident = &IdentifierLiteral{Key: p.cur.Literal()} // identifier
 	p.advance()
 	p.skip("=")
 
-	expr, err := p.parseExpression(LOWEST) //
-	if err != nil {
-		return nil, err
-	}
-	assign.addChild(expr)
-	return &AssignStatement{ASTList: assign}, nil
-}
-func (p *Parser) parseExpression(precedence int) (ASTNode, error) {
-	parser, ok := p.prefixParser[p.cur.GetType()]
-	if !ok {
-		return nil, fmt.Errorf("no prefix function for %v", p.cur.GetType())
-	}
-	left, _ := parser() // ASTNode, error. Usually ASTLeaf
-	for p.next != EOL && precedence < p.peekPrecedence() {
-		infix, ok := p.infixParser[p.next.GetType()]
-		if !ok {
-			return left, fmt.Errorf("no infix function for %v", p.next.GetType())
-		}
-		p.advance()
-		left, _ = infix(left)
-	}
-	return left, nil
-}
-func (p *Parser) parseGroupedExpression() (ASTNode, error) {
-	p.skip("(")
-	expr, err := p.parseExpression(LOWEST)
-	if p.checkNext(")") {
-		p.advance()
-		return expr, err
-	} else {
-		return nil, fmt.Errorf("( ) don't match")
-	}
-}
-func (p *Parser) parseInfixExpression(left ASTNode) (ASTNode, error) {
-	expr := ASTList{Token: p.cur}
-	expr.addChild(left)
-
-	precedence := p.curPrecedence()
-	p.advance()
-	right, err := p.parseExpression(precedence)
-	if err != nil {
-		return nil, err
-	}
-	expr.addChild(right)
-
-	return &Expression{ASTList: expr}, nil
-}
-func (p *Parser) parseTernary(condition ASTNode) (ASTNode, error) {
-	// log.Println("Now I am in Ternary?")
-	p.skip("?")
-	ternary := ASTList{}
-	ternary.addChild(condition)
-	expr, err := p.parseExpression(LOWEST)
-	if err != nil {
-		return nil, err
-	}
-	ternary.addChild(expr)
-	p.advance()
-	p.skip(":")
-	expr, err = p.parseExpression(LOWEST)
-	if err != nil {
-		return nil, err
-	}
-	ternary.addChild(expr)
-
-	return &TernaryStatement{ASTList: ternary}, nil
+	assign.Expr, _ = p.parseExpression(LOWEST) //
+	return assign, nil
 }
 
-func (p *Parser) parseIf() (ASTNode, error) {
+func (p *Parser) parseIfExpression() (Expression, error) {
+	ie := &IfExpression{conditions: make([]Expression, 0),
+		executes: make([]*BlockExpression, 0)}
 
-	node := ASTList{Token: p.cur}
-	p.advance()
-
-	expr, err := p.parseExpression(LOWEST)
+	p.skip("if")
+	log.Println("----- parseIfExpression -----  ", p.cur.Type(), p.cur.Literal())
+	cnd, err := p.parseExpression(LOWEST)
 	if err != nil {
 		return nil, err
 	}
 
 	p.advance()
-	block, err := p.parseBlock()
+	block, err := p.parseBlockExpression()
 	if err != nil {
 		return nil, err
 	}
-	node.addChild(expr)
-	node.addChild(block)
+	ie.addPair(cnd, block)
 	// ------------------- else
 	for p.checkCur("else") {
-		if p.checkNext("if") {
+		p.advance()
+		if p.checkCur("if") {
 			p.advance()
-			p.advance()
-			expr, err = p.parseExpression(LOWEST)
+			cnd, err = p.parseExpression(LOWEST)
 			if err != nil {
 				return nil, err
 			}
 			p.advance()
-			block, err := p.parseBlock()
-			if err != nil {
-				return nil, err
-			}
-			node.addChild(expr)
-			node.addChild(block)
 		} else {
-			p.advance()
-			block, err := p.parseBlock()
-			if err != nil {
-				return nil, err
-			}
-			node.addChild(&ASTLeaf{Token: NewNumToken(p.lexer.lineNo, 1)}) // true condition
-			node.addChild(block)
+			cnd = &Integer{Value: 1}
 		}
+
+		block, err := p.parseBlockExpression()
+		if err != nil {
+			return nil, err
+		}
+		ie.addPair(cnd, block)
 	}
-	return &IfStatement{ASTList: node}, nil
+	return ie, nil
 }
 
-func (p *Parser) parseWhile() (ASTNode, error) {
-	node := ASTList{Token: p.cur}
+func (p *Parser) parseWhileExpression() (ASTNode, error) {
+	we := &WhileExpression{}
 	p.advance()
-	expr, err := p.parseExpression(LOWEST)
-	if err != nil {
-		return nil, err
-	}
-	p.advance()
-	block, err := p.parseBlock()
-	if err != nil {
-		return nil, err
-	}
-	node.addChild(expr)
-	node.addChild(block)
+	we.Condition, _ = p.parseExpression(LOWEST)
 
-	return &WhileStatement{ASTList: node}, nil
+	p.advance()
+	we.Execute, _ = p.parseBlockExpression()
+
+	return we, nil
 }
 
-func (p *Parser) parseBlock() (ASTNode, error) {
+func (p *Parser) parseBlockExpression() (*BlockExpression, error) {
 	// log.Println("block!\t")
 	p.skip("{")
-	block := &ASTList{}
-	for p.cur.GetText() != "}" {
+	block := &BlockExpression{Statements: make([]Statement, 0)}
+	for !p.checkCur(RBRACE) {
 		// log.Println("cur and next are ", p.cur, p.next)
 
 		if p.cur == EOL {
@@ -290,37 +231,191 @@ func (p *Parser) parseBlock() (ASTNode, error) {
 		// log.Println(p.lexer.lineNo, "th line : ", stmt.String())
 		// advance
 		p.advance()
-		block.addChild(stmt)
+		block.Statements = append(block.Statements, stmt)
 
 	}
-	if p.checkCur("}") {
-		p.advance()
-	}
+	p.skip("}")
 	return block, nil
 }
+func (p *Parser) parseExpression(precedence int) (Expression, error) {
+	tp := p.cur.Type()
+	log.Println("---- parseExpression ----", p.cur, tp)
 
-func (p *Parser) parseIdentifier() (ASTNode, error) {
-	return &ASTLeaf{Token: p.cur}, nil
+	if tp == OPERATOR {
+		tp = p.cur.Literal()
+	}
+	parser, ok := p.prefixParser[tp]
+	if !ok {
+		return nil, fmt.Errorf("no prefix function for %+v", p.cur.Literal())
+	}
+	left, _ := parser() // Expression, error
+	for p.next.Literal() != "EOL" && precedence < p.peekPrecedence() {
+		tp = p.next.Type()
+		if tp == OPERATOR {
+			tp = p.next.Literal()
+		}
+		infix, ok := p.infixParser[tp]
+		if !ok {
+			return left, fmt.Errorf("no infix function for %v", p.next.Literal())
+		}
+		p.advance()
+		left, _ = infix(left)
+	}
+	return left, nil
 }
 
-func (p *Parser) parseInteger() (ASTNode, error) {
-	return &ASTLeaf{Token: p.cur}, nil
+func (p *Parser) parseUnaryExpression() (Expression, error) {
+	ue := &UnaryExpression{
+		Operator: p.cur.Literal(),
+	}
+	p.advance()
+	ue.Right, _ = p.parseExpression(PREFIX)
+	return ue, nil
 }
+func (p *Parser) parseGroupedExpression() (Expression, error) {
+	p.skip("(")
+	expr, _ := p.parseExpression(LOWEST)
+	p.advance()
+	p.skip(")")
+	return expr, nil
+}
+func (p *Parser) parseInfixExpression(left Expression) (Expression, error) {
+	expr := &InfixExpression{
+		Operator: p.cur.Literal(),
+		Left:     left,
+	}
+	precedence := p.curPrecedence()
+	p.advance()
+	expr.Right, _ = p.parseExpression(precedence)
+	return expr, nil
+}
+func (p *Parser) parseTernaryExpression(condition Expression) (Expression, error) {
+	// log.Println("Now I am in Ternary?")
+	p.skip("?")
+	ternary := &TernaryExpression{
+		condition: condition,
+	}
+	ternary.left, _ = p.parseExpression(LOWEST)
+	p.advance()
+	p.skip(":")
+	ternary.right, _ = p.parseExpression(LOWEST)
+	return ternary, nil
+}
+
+func (p *Parser) parseIndexExpression(left Expression) (Expression, error) {
+	expr := &IndexExpression{
+		Left: left,
+	}
+	p.skip(LBRACKET)
+	expr.Index, _ = p.parseExpression(LOWEST)
+	p.advance()
+	p.skip(RBRACKET)
+	return expr, nil
+}
+func (p *Parser) parseCallExpression(left Expression) (Expression, error) {
+	ce := &CallExpression{
+		Function: left,
+	}
+	p.skip(LPAREN)
+	ce.Arguments, _ = p.parseExpressionList(RPAREN)
+	p.skip(RPAREN)
+	return ce, nil
+}
+
+func (p *Parser) parseExpressionList(end string) ([]Expression, error) {
+	list := []Expression{}
+	if p.checkCur(end) { // no identifier
+		return list, nil
+	}
+	for {
+		expr, _ := p.parseExpression(LOWEST)
+		list = append(list, expr)
+		p.advance()
+		if p.checkCur(end) {
+			return list, nil
+		} else if p.checkCur(COMMA) {
+			p.advance()
+		} else {
+			return nil, fmt.Errorf("function parameters mismatch")
+		}
+	}
+}
+
+// ================= parse leaves
+
+func (p *Parser) parseArray() (Expression, error) {
+	array := &ArrayLiteral{Elements: make([]Expression, 0)}
+	p.skip(LBRACKET)
+	array.Elements, _ = p.parseExpressionList(RBRACKET)
+	p.skip(RBRACKET)
+	return array, nil
+}
+
+func (p *Parser) parseFunction() (Expression, error) {
+	p.skip("func")
+	paras, _ := p.parseIdentifierList()
+	p.skip(RPAREN)
+	exec, _ := p.parseBlockExpression()
+	return &FunctionLiteral{
+		Parameters: paras,
+		Execute:    exec,
+	}, nil
+}
+func (p *Parser) parseIdentifierList() ([]*IdentifierLiteral, error) {
+	p.skip(LPAREN)
+	list := []*IdentifierLiteral{}
+	if p.checkCur(RPAREN) { // no identifier
+		return list, nil
+	}
+	for {
+		ident := &IdentifierLiteral{Key: p.cur.Literal()}
+		list = append(list, ident)
+		p.advance()
+		if p.checkCur(RPAREN) {
+			return list, nil
+		} else if p.checkCur(COMMA) {
+			p.advance()
+		}
+	}
+}
+
+// ========== parse leaves
+func (p *Parser) parseString() (Expression, error) {
+	return &StringLiteral{Key: p.cur.Literal()}, nil
+}
+
+func (p *Parser) parseIdentifier() (Expression, error) {
+	return &IdentifierLiteral{Key: p.cur.Literal()}, nil
+}
+
+func (p *Parser) parseInteger() (Expression, error) {
+	val, err := strconv.Atoi(p.cur.Literal())
+	if err != nil {
+		return nil, err
+	}
+	return &NumberLiteral{Key: val}, nil
+}
+
+//  ============ helper functions
+
 func (p *Parser) peekPrecedence() int {
-	if p, ok := precedences[p.next.GetType()]; ok {
+	t := p.next.Type()
+	if t == OPERATOR {
+		t = p.next.Literal()
+	}
+	if p, ok := precedences[t]; ok {
 		return p
 	}
 
 	return LOWEST
 }
 
-// ======================= helper functions
-
 func (p *Parser) skip(s string) {
 	if p.checkCur(s) {
 		p.advance()
 	} else {
-		// log.Fatalln(p.lexer.lineNo, "th line", "expect ", s, "got", p.cur.GetText(), "----- the cur and next are", p.cur, p.next)
+		log.Panicf("want %s, got <%s %s>", s, p.cur.Type(), p.cur.Literal())
+
 	}
 }
 
@@ -330,7 +425,11 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) curPrecedence() int {
-	if p, ok := precedences[p.cur.GetType()]; ok {
+	t := p.cur.Type()
+	if t == OPERATOR {
+		t = p.cur.Literal()
+	}
+	if p, ok := precedences[t]; ok {
 		return p
 	}
 
@@ -338,9 +437,9 @@ func (p *Parser) curPrecedence() int {
 }
 
 func (p *Parser) checkCur(expt string) bool {
-	return p.cur.GetText() == expt
+	return p.cur.Literal() == expt
 }
 
 func (p *Parser) checkNext(expt string) bool {
-	return p.next.GetText() == expt
+	return p.next.Literal() == expt
 }
