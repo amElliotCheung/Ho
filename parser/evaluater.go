@@ -35,21 +35,27 @@ func (e *Evaluater) eval(node Statement) Object {
 
 	switch node := node.(type) {
 	case *IdentifierLiteral:
-		if obj, err := e.env.Get(node.Key); err != nil {
-			log.Panicln("eval IdentifierLiteral : ", err)
-		} else {
+		if obj, err := e.env.Get(node.Key); err == nil {
 			result = obj
+		} else {
+			if bt, ok := builtins[node.Key]; ok {
+				result = bt
+			} else {
+				log.Panicln("eval IdentifierLiteral : ", err)
+			}
 		}
-	case *NumberLiteral:
+	case *IntegerLiteral:
 		result = &Integer{Value: node.Key}
 	case *StringLiteral:
 		result = &String{Value: node.Key}
+	case *BooleanLiteral:
+		result = &Boolean{Value: node.Key}
 	case *DefineExpression:
 		result = e.evalDefine(node)
 	case *AssignExpression:
 		result = e.evalAssign(node)
 	case *FunctionLiteral:
-		log.Println("Function literal", node)
+		// log.Println("Function literal", node)
 		paras := node.Parameters
 		body := node.Execute
 		result = &Function{Parameters: paras, Body: body, Env: e.env}
@@ -74,11 +80,51 @@ func (e *Evaluater) eval(node Statement) Object {
 	case *CallExpression:
 		fn := e.eval(node.Function)         // return function object
 		args := e.evalExprs(node.Arguments) // expressions
+		log.Println("------- fn args ---------")
+		log.Println(fn, "  ,  ", args)
 		result = e.applyFunction(fn, args)
 
+	case *UnaryExpression: // ! -
+		obj := e.eval(node.Right)
+		switch {
+		case node.Operator == MINUS && obj.Type() == INTEGER_OBJ:
+			return &Integer{Value: -obj.(*Integer).Value}
+
+		case node.Operator == BANG && obj.Type() == BOOLEAN_OBJ:
+			return &Boolean{Value: !obj.(*Boolean).Value}
+
+		default:
+			log.Panic("--- illegal unary expression ---")
+			log.Printf("%T, %v", node.Right, node.Right)
+			log.Printf("unary obj: %v", obj)
+
+		}
+	case *InfixExpression:
+
+		left := e.eval(node.Left)
+		right := e.eval(node.Right)
+		// log.Println("---- infix expression ----")
+		// log.Printf("%T, %T", node.Left, node.Right)
+		// log.Printf("%v, %v", left, right)
+		if left.Type() == right.Type() {
+			switch left.Type() {
+			case INTEGER_OBJ:
+				l := left.(*Integer).Value
+				r := right.(*Integer).Value
+				return e.evalInfixExpressionInteger(node.Operator, l, r)
+			case STRING_OBJ:
+				return e.evalInfixExpressionString(node.Operator, left.String(), right.String())
+			case BOOLEAN_OBJ:
+				l := left.(*Boolean).Value
+				r := right.(*Boolean).Value
+				return e.evalInfixExpressionBoolean(node.Operator, l, r)
+			}
+		} else {
+			log.Panic("different types in an expression")
+		}
 	default:
-		log.Printf("evalStatement ---> default expression - - %T", node)
-		result = e.evalExpr(node)
+		log.Printf("evalStatement ---> illegal type - - %T", node)
+		result = e.eval(node)
 		// case *TernaryStatement:
 		// 	log.Println("evaluater ---> Ternary")
 		// 	result = e.evalTernary(node)
@@ -100,70 +146,9 @@ func (e *Evaluater) evalAssign(node *AssignExpression) Object {
 	if _, err := e.env.Get(node.Ident.Key); err != nil {
 		log.Panic(err)
 	}
-	obj := e.evalExpr(node.Expr)
+	obj := e.eval(node.Expr)
 	e.env.Set(node.Ident.Key, obj)
 	return obj
-}
-
-func (e *Evaluater) evalExpr(node Expression) Object {
-	// if ternary
-	switch node := node.(type) {
-
-	case *IdentifierLiteral:
-		obj, err := e.env.Get(node.Key)
-		if err != nil {
-			log.Panicln(err)
-		}
-		return obj
-
-	case *StringLiteral:
-		return &String{Value: node.Key}
-
-	case *NumberLiteral:
-		return &Integer{Value: node.Key}
-
-	case *UnaryExpression: // ! -
-
-		obj, ok := e.evalExpr(node.Right).(*Integer)
-		if !ok {
-			log.Panic("illegal unary expression")
-		}
-		log.Println("---- unary expression ----")
-		log.Printf("%T, %v", node.Right, node.Right)
-		log.Printf("unary obj: %v", obj)
-		switch node.Operator { // obj must be integer
-		case MINUS:
-			obj.Value = -obj.Value
-			return obj
-		case BANG:
-			if obj.Value == 0 {
-				obj.Value = 1
-			} else {
-				obj.Value = 0
-			}
-			return obj
-		}
-	case *InfixExpression:
-
-		left := e.evalExpr(node.Left)
-		right := e.evalExpr(node.Right)
-		log.Println("---- infix expression ----")
-		log.Printf("%T, %T", node.Left, node.Right)
-		log.Printf("%v, %v", left, right)
-		if left.Type() == right.Type() {
-			switch left.Type() {
-			case INTEGER_OBJ:
-				l := left.(*Integer).Value
-				r := right.(*Integer).Value
-				return e.evalInfixExpressionInteger(node.Operator, l, r)
-			case STRING_OBJ:
-				return e.evalInfixExpressionString(node.Operator, left.String(), right.String())
-			}
-		} else {
-			log.Panic("different types in an expression")
-		}
-	}
-	return nil
 }
 
 func (e *Evaluater) evalArray(node *ArrayLiteral) Object {
@@ -205,9 +190,9 @@ func (e *Evaluater) evalWhile(node *WhileExpression) Object {
 }
 func (e *Evaluater) evalTernary(node *TernaryExpression) Object {
 	if e.isTure(node.condition) {
-		return e.evalExpr(node.left)
+		return e.eval(node.left)
 	}
-	return e.evalExpr(node.right)
+	return e.eval(node.right)
 }
 
 func (e *Evaluater) evalBlock(node *BlockExpression) Object {
@@ -231,41 +216,29 @@ func (e *Evaluater) evalInfixExpressionInteger(op string, l, r int) Object {
 	case "%":
 		return &Integer{Value: l % r}
 	case ">":
-		isSatisfied := 0
-		if l > r {
-			isSatisfied = 1
-		}
-		return &Integer{Value: isSatisfied}
+		return &Boolean{Value: l > r}
 	case "<":
-		isSatisfied := 0
-		if l < r {
-			isSatisfied = 1
-		}
-		return &Integer{Value: isSatisfied}
+		return &Boolean{Value: l < r}
 	case ">=":
-		isSatisfied := 0
-		if l >= r {
-			isSatisfied = 1
-		}
-		return &Integer{Value: isSatisfied}
+		return &Boolean{Value: l >= r}
 	case "<=":
-		isSatisfied := 0
-		if l <= r {
-			isSatisfied = 1
-		}
-		return &Integer{Value: isSatisfied}
+		return &Boolean{Value: l <= r}
 	case "==":
-		isSatisfied := 0
-		if l == r {
-			isSatisfied = 1
-		}
-		return &Integer{Value: isSatisfied}
+		return &Boolean{Value: l == r}
 	case "!=":
-		isSatisfied := 0
-		if l != r {
-			isSatisfied = 1
-		}
-		return &Integer{Value: isSatisfied}
+		return &Boolean{Value: l != r}
+	default:
+		log.Panic("illegal operator for integer")
+	}
+	return nil
+}
+
+func (e *Evaluater) evalInfixExpressionBoolean(op string, l, r bool) Object {
+	switch op {
+	case "==":
+		return &Boolean{Value: l == r}
+	case "!=":
+		return &Boolean{Value: l != r}
 	default:
 		log.Panic("illegal operator for integer")
 	}
@@ -284,22 +257,36 @@ func (e *Evaluater) evalInfixExpressionString(op, l, r string) Object {
 
 func (e *Evaluater) evalExprs(exprs []Expression) []Object {
 	objs := []Object{}
+	log.Println("---- eval Exprs - - -")
+	log.Println(exprs)
 	for _, expr := range exprs {
-		objs = append(objs, e.evalExpr(expr))
+		objs = append(objs, e.eval(expr))
 	}
+	log.Println(objs)
+
 	return objs
 }
 
 func (e *Evaluater) applyFunction(fn Object, args []Object) Object {
-	f := fn.(*Function)
-	e.env = NewFunctionEnvirontment(e.env, f, args)
-	obj := e.evalBlock(f.Body)
-	e.env = e.env.outter
+	var obj Object
+	log.Println("--------- apply function --------")
+	log.Println("fn ", fn, " - ", "args ", args)
+	switch fn := fn.(type) {
+	case *Function:
+		e.env = NewFunctionEnvirontment(e.env, fn, args)
+		obj = e.evalBlock(fn.Body)
+		e.env = e.env.outter
+	case *Builtin:
+		log.Printf("%T %v", fn, fn)
+
+		obj = fn.Fn(args...)
+
+	}
 	return obj
 }
 
 // ==================== helper functions
 func (e *Evaluater) isTure(node ASTNode) bool {
-	res := e.evalExpr(node)
-	return res.Type() == "INTEGER" && res.String() != "0"
+	res := e.eval(node).(*Boolean)
+	return res.Value == true
 }

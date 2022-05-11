@@ -9,7 +9,7 @@ import (
 )
 
 // const regexPat = `\s*((//.*)|([0-9]+)|("(\\"|\\\\|\\n|[^"])*")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|:=|=|!=|>=|<=|<|>|&&|\|\||\\n|\?|:|\[|\]|{|}|,)|[[:punct:]])?`
-const regexPat = `\s*((//.*)|([0-9]+)|("((\\"|\\\\|\\n|[^"])*)")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|:=|=|!=|>=|<=|<|>|&&|\|\||\\n|\?|:|\[|\]|{|}|,|\(|\))|[[:punct:]])?`
+const regexPat = `\s*((//.*)|([0-9]+)|("((\\"|\\\\|\\n|[^"])*)")|([A-Za-z]\w*)|(\+|-|\*|/|%|==|:=|=|!=|>=|<=|<|>|!|&&|\|\||\\n|\?|:|\[|\]|{|}|,|\(|\))|[[:punct:]])?`
 
 type Lexer struct {
 	pat     *regexp.Regexp // regular expression
@@ -88,7 +88,7 @@ func (l *Lexer) AddToken(str string) {
 	// 4 ".."
 	// 5 ..str..
 	// 6 char
-	// 7 identifier
+	// 7 identifier | true | false
 	// 8 op
 	//
 	//
@@ -107,7 +107,11 @@ func (l *Lexer) AddToken(str string) {
 		// tk = NewStrToken(l.lineNo, matches[5])
 		tk = NewStrToken(l.lineNo, l.toStringLiteral(matches[5]))
 	} else if matches[7] != "" { // identifier
-		for _, reserved := range []string{IF, WHILE, FUNCTION} {
+		if matches[7] == TRUE || matches[7] == FALSE {
+			tk = NewBooleanToken(l.lineNo, matches[7])
+			goto Add
+		}
+		for _, reserved := range []string{IF, WHILE, FUNCTION, TRUE, FALSE} {
 			if matches[7] == reserved {
 				tk = NewReservedToken(l.lineNo, reserved)
 				goto Add

@@ -45,3 +45,31 @@ func TestParser_Parse2(t *testing.T) {
 	t.Log("================ parse ERROR =============\n ", err)
 
 }
+
+func TestParser_Parse3(t *testing.T) {
+	input := `a = true
+	b = !a`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	root, err := parser.Parse(nil)
+	t.Log("================ parse root =============\n ", root)
+	t.Log("================ parse ERROR =============\n ", err)
+
+}
+
+func TestParser_Parse4(t *testing.T) {
+	input := `a := [1, 2]
+	l := len(a)
+	while len(a) <= 10 {
+		a = append(a, 3)
+	}
+	l`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	root, err := parser.Parse(nil)
+	t.Log("================ parse root =============\n ", root)
+	t.Log("================ parse ERROR =============\n ", err)
+
+}

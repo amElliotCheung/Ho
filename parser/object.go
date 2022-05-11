@@ -10,9 +10,11 @@ const (
 	IDENTIFIER_OBJ = "IDENTIFIER" // add, x, y, ...
 	INTEGER_OBJ    = "INTEGER"    // 1343456
 	STRING_OBJ     = "STRING"     // "foobar"
+	BOOLEAN_OBJ    = "BOOLEAN"
 	NUMBER_OBJ     = "NUMBER"
 	FUNCTION_OBJ   = "FUNCTION"
 	ARRAY_OBJ      = "ARRAY"
+	BUILTIN_OBJ    = "BUILTIN"
 )
 
 type Object interface {
@@ -43,6 +45,32 @@ func (s String) Type() string {
 func (s String) String() string {
 	return s.Value
 }
+
+// ================= bool
+type Boolean struct {
+	Value bool
+}
+
+func (b Boolean) Type() string {
+	return BOOLEAN_OBJ
+}
+func (b Boolean) String() string {
+	res := "false"
+	if b.Value {
+		res = "true"
+	}
+	return res
+}
+
+// =================== builtin functions
+type BuiltinFunction func(...Object) Object
+
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+func (b *Builtin) Type() string   { return BUILTIN_OBJ }
+func (b *Builtin) String() string { return "builtin function" }
 
 //
 // =================== function object

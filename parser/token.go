@@ -5,7 +5,7 @@ const (
 	IDENTIFIER = "IDENTIFIER" // add, x, y, ...
 	INTEGER    = "INTEGER"    // 1343456
 	STRING     = "STRING"     // "foobar"
-
+	BOOLEAN    = "BOOLEAN"
 	// Operators
 	OPERATOR = "OPERATOR"
 	ASSIGN   = "="
@@ -38,6 +38,8 @@ const (
 	IF       = "if"
 	ELSE     = "else"
 	WHILE    = "while"
+	TRUE     = "true"
+	FALSE    = "false"
 )
 
 type Token interface {
@@ -114,6 +116,22 @@ func NewStrToken(lineNo int, literal string) *StrToken {
 
 func (s StrToken) Type() string {
 	return STRING
+}
+
+// =========================== bool
+type BooleanToken struct {
+	BaseToken
+}
+
+func NewBooleanToken(lineNo int, literal string) *BooleanToken {
+	return &BooleanToken{
+		BaseToken: BaseToken{lineNumber: lineNo,
+			literal: literal},
+	}
+}
+
+func (b BooleanToken) Type() string {
+	return BOOLEAN
 }
 
 // =========================== Operator

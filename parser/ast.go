@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"bytes"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -33,16 +34,16 @@ type IdentifierLiteral struct {
 }
 
 func (i IdentifierLiteral) String() string {
-	return i.Key
+	return reflect.TypeOf(i).String() + " " + i.Key
 }
 
-// ==================== NumberLiteral
-type NumberLiteral struct {
+// ==================== IntegerLiteral
+type IntegerLiteral struct {
 	Key int
 }
 
-func (n NumberLiteral) String() string {
-	return strconv.Itoa(n.Key)
+func (n IntegerLiteral) String() string {
+	return reflect.TypeOf(n).String() + " " + strconv.Itoa(n.Key)
 }
 
 //	=============== String
@@ -51,7 +52,19 @@ type StringLiteral struct {
 }
 
 func (s StringLiteral) String() string {
-	return s.Key
+	return reflect.TypeOf(s).String() + " " + s.Key
+}
+
+// ================= boolean
+type BooleanLiteral struct {
+	Key bool
+}
+
+func (b BooleanLiteral) String() string {
+	if b.Key {
+		return "true"
+	}
+	return "false"
 }
 
 // ================= array
@@ -61,7 +74,7 @@ type ArrayLiteral struct {
 
 func (a ArrayLiteral) String() string {
 	var out bytes.Buffer
-	out.WriteString("array")
+	out.WriteString(reflect.TypeOf(a).String() + " ")
 	out.WriteString(LBRACE)
 	for i, e := range a.Elements {
 		if i != 0 {
@@ -81,7 +94,7 @@ type IndexExpression struct {
 }
 
 func (ie IndexExpression) String() string {
-	return "IndexExpr " + ie.Left.String() + LBRACKET + ie.Index.String() + RBRACKET
+	return reflect.TypeOf(ie).String() + " " + ie.Left.String() + LBRACKET + ie.Index.String() + RBRACKET
 }
 
 // ====== function
@@ -92,7 +105,7 @@ type FunctionLiteral struct {
 
 func (f FunctionLiteral) String() string {
 	var out bytes.Buffer
-	out.WriteString("func")
+	out.WriteString(reflect.TypeOf(f).String())
 
 	out.WriteString(LPAREN)
 
@@ -117,7 +130,7 @@ type CallExpression struct {
 
 func (ce CallExpression) String() string {
 	var out bytes.Buffer
-	out.WriteString(ce.Function.String())
+	out.WriteString(reflect.TypeOf(ce).String() + " " + ce.Function.String())
 	out.WriteString(LPAREN)
 
 	paras := []string{}
@@ -137,7 +150,7 @@ type UnaryExpression struct {
 }
 
 func (ue UnaryExpression) String() string {
-	return "unaryExpression" + ue.Operator + ue.Right.String()
+	return reflect.TypeOf(ue).String() + " " + ue.Operator + ue.Right.String()
 }
 
 // ================== Infix Expression
@@ -149,6 +162,7 @@ type InfixExpression struct {
 func (ie InfixExpression) String() string {
 	var out bytes.Buffer
 
+	out.WriteString(reflect.TypeOf(ie).String() + " ")
 	out.WriteString(LPAREN)
 	out.WriteString(ie.Left.String() + ie.Operator + ie.Right.String())
 	out.WriteString(RPAREN)
@@ -163,7 +177,7 @@ type AssignExpression struct {
 }
 
 func (ae AssignExpression) String() string {
-	return "(" + ae.Ident.String() + "=" + ae.Expr.String() + ")"
+	return reflect.TypeOf(ae).String() + " " + "(" + ae.Ident.String() + "=" + ae.Expr.String() + ")"
 }
 
 // define
@@ -173,7 +187,7 @@ type DefineExpression struct {
 }
 
 func (de DefineExpression) String() string {
-	return "(" + de.Ident.String() + ":=" + de.Expr.String() + ")"
+	return reflect.TypeOf(de).String() + " " + "(" + de.Ident.String() + ":=" + de.Expr.String() + ")"
 }
 
 // ================= If Statement
@@ -190,7 +204,7 @@ func (ie *IfExpression) addPair(cnd Expression, block *BlockExpression) {
 func (ie IfExpression) String() string {
 	var out bytes.Buffer
 
-	out.WriteString("(")
+	out.WriteString(reflect.TypeOf(ie).String() + " " + "(")
 
 	for i := range ie.conditions {
 		if i == 0 {
@@ -213,7 +227,7 @@ type TernaryExpression struct {
 }
 
 func (ts TernaryExpression) String() string {
-	return "Ternary" + "(" + ts.condition.String() + " ? " + ts.left.String() + ":" + ts.right.String() + ")"
+	return reflect.TypeOf(ts).String() + " " + "(" + ts.condition.String() + " ? " + ts.left.String() + ":" + ts.right.String() + ")"
 }
 
 // ================= While Statement
@@ -223,7 +237,7 @@ type WhileExpression struct {
 }
 
 func (we WhileExpression) String() string {
-	return "while" + we.Condition.String() + we.Execute.String()
+	return reflect.TypeOf(we).String() + " " + we.Condition.String() + we.Execute.String()
 }
 
 type BlockExpression struct {
@@ -250,6 +264,7 @@ type Program struct {
 func (p Program) String() string {
 	var out bytes.Buffer
 
+	out.WriteString(reflect.TypeOf(p).String() + "\n")
 	for _, s := range p.Statements {
 		out.WriteString(s.String())
 		out.WriteString("\n")

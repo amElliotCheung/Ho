@@ -1,38 +1,60 @@
-## Progress 4.21 (develop a language)
+## Progress 4.28 (develop a language)
 
 ## Finished
 - the lexer part
 - the parser part
+- the evaluater part
 
 ```go
-// test code
-a = 0
-b = 0
-c = 0
-if 1 > 2 {
-    a = a + 2*3 + 1
-    a = a - 3*2/1 + 1 - 1/1
-} else if 2 > 3 {
-    b = b + 1 + 0
-} else {
-    c = c + 1
+// compute 5!
+n = 5
+f = 1
+while n {
+    f = f * n
+    n = n - 1
 }
-even = 0
-odd = 0
-i = 0
-while i < 10 {
-    if i % 2 == 0 { // even number
-        even = even + i
-    } else { 
-        odd = odd + i
-    }
-    i = i + 1
-}
-even + odd
+f
 ```
-``` python
- I have 9 children ==> ((a=0) (b=0) (c=0) (if (1>2)then I have 2 children ==> ((a=((a+(2*3))+1)) (a=(((a-((3*2)/1))+1)-(1/1))) )else if (2>3)then I have 1 children ==> ((b=((b+1)+0)) )else if truethen I have 1 children ==> ((c=(c+1)) )) (even=0) (odd=0) (i=0) (while (i<10) do I have 2 children ==> ((if ((i%2)==0)then I have 1 children ==> ((even=(even+i)) )else if truethen I have 1 children ==> ((odd=(odd+i)) )) (i=(i+1)) )) (even+odd) )
+``` sh
+--  1 INTEGER 5 --
+--  2 INTEGER 1 --
+--  3 INTEGER 0 --
+--  4 INTEGER 120 --
+=============  evaluater final result  ============
+--  INTEGER 120 --
 ```
 
-## Current 
-- evaluation
+``` go
+// compute 0 + 1 + ... + 10
+while i <= 10 {
+    sum = sum + i
+    i = i + 1
+}
+```
+``` go
+--  1 INTEGER 11 --
+--  2 INTEGER 55 --
+=============  evaluater final result  ============
+--  INTEGER 55 --
+```
+```go
+i = 1
+while i <= 10 {
+    i % 2 ? odd = odd + i : even = even + i
+    i = i + 1
+}
+odd
+even
+odd + even
+```
+
+```go
+--  1 INTEGER 1 --
+--  2 INTEGER 11 --
+--  3 INTEGER 25 --
+--  4 INTEGER 30 --
+--  5 INTEGER 55 --
+```
+
+## Next 
+- add functions

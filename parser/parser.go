@@ -60,6 +60,7 @@ func NewParser(l *Lexer) *Parser {
 
 	p.prefixParser[IDENTIFIER] = p.parseIdentifier
 	p.prefixParser[INTEGER] = p.parseInteger
+	p.prefixParser[BOOLEAN] = p.parseBoolean
 	p.prefixParser[STRING] = p.parseString
 	p.prefixParser[LBRACKET] = p.parseArray
 	p.prefixParser[LPAREN] = p.parseGroupedExpression
@@ -187,7 +188,7 @@ func (p *Parser) parseIfExpression() (Expression, error) {
 			}
 			p.advance()
 		} else {
-			cnd = &Integer{Value: 1}
+			cnd = &IntegerLiteral{Key: 1}
 		}
 
 		block, err := p.parseBlockExpression()
@@ -238,8 +239,8 @@ func (p *Parser) parseBlockExpression() (*BlockExpression, error) {
 	return block, nil
 }
 func (p *Parser) parseExpression(precedence int) (Expression, error) {
+
 	tp := p.cur.Type()
-	log.Println("---- parseExpression ----", p.cur, tp)
 
 	if tp == OPERATOR {
 		tp = p.cur.Literal()
@@ -250,6 +251,8 @@ func (p *Parser) parseExpression(precedence int) (Expression, error) {
 	}
 	left, _ := parser() // Expression, error
 	for p.next.Literal() != "EOL" && precedence < p.peekPrecedence() {
+		log.Println("---- parseExpression ----", p.cur, p.next)
+
 		tp = p.next.Type()
 		if tp == OPERATOR {
 			tp = p.next.Literal()
@@ -260,11 +263,15 @@ func (p *Parser) parseExpression(precedence int) (Expression, error) {
 		}
 		p.advance()
 		left, _ = infix(left)
+
 	}
+	log.Println("---- parseExpression end----", p.cur, p.next)
+
 	return left, nil
 }
 
 func (p *Parser) parseUnaryExpression() (Expression, error) {
+	log.Printf("========= unary expression========%T %v", p.cur, p.cur)
 	ue := &UnaryExpression{
 		Operator: p.cur.Literal(),
 	}
@@ -309,7 +316,7 @@ func (p *Parser) parseIndexExpression(left Expression) (Expression, error) {
 	p.skip(LBRACKET)
 	expr.Index, _ = p.parseExpression(LOWEST)
 	p.advance()
-	p.skip(RBRACKET)
+	// p.skip(RBRACKET)
 	return expr, nil
 }
 func (p *Parser) parseCallExpression(left Expression) (Expression, error) {
@@ -317,8 +324,11 @@ func (p *Parser) parseCallExpression(left Expression) (Expression, error) {
 		Function: left,
 	}
 	p.skip(LPAREN)
+	log.Println("-- CallExpression --", p.cur, p.next)
+
 	ce.Arguments, _ = p.parseExpressionList(RPAREN)
-	p.skip(RPAREN)
+	// delete this so that len(a) <= 10 could work
+	// p.skip(RPAREN)
 	return ce, nil
 }
 
@@ -328,9 +338,14 @@ func (p *Parser) parseExpressionList(end string) ([]Expression, error) {
 		return list, nil
 	}
 	for {
+		log.Println("expressionList:", p.cur, p.next)
 		expr, _ := p.parseExpression(LOWEST)
+		log.Println("expressionList: expr", expr, p.cur, p.next)
+
 		list = append(list, expr)
 		p.advance()
+		log.Println("expressionList after advance", p.cur, p.next)
+
 		if p.checkCur(end) {
 			return list, nil
 		} else if p.checkCur(COMMA) {
@@ -393,7 +408,15 @@ func (p *Parser) parseInteger() (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NumberLiteral{Key: val}, nil
+	return &IntegerLiteral{Key: val}, nil
+}
+
+func (p *Parser) parseBoolean() (Expression, error) {
+	key := false
+	if p.cur.Literal() == "true" {
+		key = true
+	}
+	return &BooleanLiteral{Key: key}, nil
 }
 
 //  ============ helper functions
@@ -414,7 +437,7 @@ func (p *Parser) skip(s string) {
 	if p.checkCur(s) {
 		p.advance()
 	} else {
-		log.Panicf("want %s, got <%s %s>", s, p.cur.Type(), p.cur.Literal())
+		log.Panicf("skip: want %s, got <%s %s>", s, p.cur.Type(), p.cur.Literal())
 
 	}
 }
