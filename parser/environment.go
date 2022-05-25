@@ -17,6 +17,10 @@ func NewEnvironment(outter *Environment) *Environment {
 
 func NewFunctionEnvirontment(outter *Environment, fn *Function, args []Object) *Environment {
 	env := NewEnvironment(outter)
+	for k, v := range fn.Env.store {
+		env.Set(k, v)
+	}
+
 	for i, p := range fn.Parameters {
 		env.Set(p.Key, args[i])
 	}

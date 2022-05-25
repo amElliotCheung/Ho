@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -15,6 +16,9 @@ const (
 	FUNCTION_OBJ   = "FUNCTION"
 	ARRAY_OBJ      = "ARRAY"
 	BUILTIN_OBJ    = "BUILTIN"
+
+	// compiler
+	COMPILED_FUNCTION_OBJ = "COMPILED_FUNCTION_OBJ"
 )
 
 type Object interface {
@@ -121,4 +125,19 @@ func (a *Array) String() string {
 	out.WriteString(strings.Join(elements, ", "))
 	out.WriteString(RBRACKET)
 	return out.String()
+}
+
+// ================== compiled function
+type CompiledFunction struct {
+	Instructions Instructions
+	NumLocals    int
+	NumParas     int
+}
+
+func (cf *CompiledFunction) Type() string {
+	return COMPILED_FUNCTION_OBJ
+}
+
+func (cf *CompiledFunction) String() string {
+	return fmt.Sprintf("func(%d paras, %d locals )", cf.NumParas, cf.NumLocals)
 }

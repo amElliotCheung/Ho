@@ -103,9 +103,8 @@ func (e *Evaluater) eval(node Statement) Object {
 
 		left := e.eval(node.Left)
 		right := e.eval(node.Right)
-		// log.Println("---- infix expression ----")
-		// log.Printf("%T, %T", node.Left, node.Right)
-		// log.Printf("%v, %v", left, right)
+		log.Println("---- infix expression ----")
+		log.Printf("op= %v, left = %T %v, right = %T %v", node.Operator, left, left, right, right)
 		if left.Type() == right.Type() {
 			switch left.Type() {
 			case INTEGER_OBJ:
@@ -204,6 +203,7 @@ func (e *Evaluater) evalBlock(node *BlockExpression) Object {
 }
 
 func (e *Evaluater) evalInfixExpressionInteger(op string, l, r int) Object {
+
 	switch op {
 	case "+":
 		return &Integer{Value: l + r}
@@ -274,6 +274,9 @@ func (e *Evaluater) applyFunction(fn Object, args []Object) Object {
 	switch fn := fn.(type) {
 	case *Function:
 		e.env = NewFunctionEnvirontment(e.env, fn, args)
+		for k, v := range e.env.store {
+			log.Println(k, v)
+		}
 		obj = e.evalBlock(fn.Body)
 		e.env = e.env.outter
 	case *Builtin:

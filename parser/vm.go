@@ -1,49 +1,60 @@
 package interpreter
 
 import (
-	"encoding/binary"
 	"fmt"
 	"log"
 )
 
-const StackSize = 2048
-const VariableSize = 2048
+const StackSize = 1 << 18
+const VariableSize = 1 << 10
 
 type VM struct {
-	instructions Instructions
-	constants    []Object
-	globals      []Object
+	constants []Object
+	globals   []Object
 
-	stack []Object
-	top   int
+	frames []*Frame
+
+	stack    []Object
+	stackIdx int
 }
 
 func NewVM(bc Bytecode) *VM {
+	mainFn := &CompiledFunction{Instructions: bc.instructions}
+	mainFrame := NewFrame(mainFn, 0)
+
+	frames := []*Frame{mainFrame}
+
 	return &VM{
-		instructions: bc.instructions,
-		constants:    bc.constants,
-		stack:        make([]Object, StackSize),
-		globals:      make([]Object, VariableSize),
-		top:          0,
+		constants: bc.constants,
+
+		stackIdx: 0,
+		stack:    make([]Object, StackSize),
+		globals:  make([]Object, VariableSize),
+
+		frames: frames,
 	}
 }
 
 func (vm *VM) Run() error {
-	pc := 0
-	iter := 0
-	for pc < len(vm.instructions) {
-		op := Opcode(vm.instructions[pc])
+	// iter := 0
+	for frame := vm.currentFrame(); frame.ip < len(frame.fn.Instructions); frame = vm.currentFrame() {
+		op := Opcode(frame.fn.Instructions[frame.ip])
+		log.Println("\n\n\n===============================")
 		switch op {
+
 		case OpConstant:
 			log.Println("constant")
-			idx := binary.BigEndian.Uint16(vm.instructions[pc+1:])
+			idx := frame.readUint16(1)
 			vm.push(vm.constants[idx])
-			pc += 3
+			frame.ip += 3
+
 		case OpPop:
 			log.Println("pop")
+			vm.pop()
+			frame.ip++
 
 		case OpAdd, OpSub, OpMult, OpDiv, OpMod, OpLt, OpGt, OpLte, OpGte, OpEq, OpNeq:
-			log.Println("add sub lt ...")
+			log.Println("add sub lt ...", OpAdd)
 			right := vm.pop()
 			left := vm.pop()
 			if left.Type() != right.Type() {
@@ -55,69 +66,107 @@ func (vm *VM) Run() error {
 			case STRING_OBJ:
 				vm.stringInfix(op, left, right)
 			}
-			pc++
+			frame.ip++
 
 		case OpMinus:
 			log.Println("minus")
 			right := vm.pop().(*Integer)
 			right.Value = -right.Value
 			vm.push(right)
-			pc++
+			frame.ip++
 
 		case OpBang:
 			log.Println("bang")
 			right := vm.pop().(*Boolean)
 			right.Value = !right.Value
 			vm.push(right)
-			pc++
+			frame.ip++
 
 		case OpJump:
 			log.Println("jump")
-			pc = int(binary.BigEndian.Uint16(vm.instructions[pc+1:]))
+			frame.ip = frame.readUint16(1)
 
 		case OpJumpIfFalse:
 			log.Println("jumpIfFalse")
 
 			if cnd := vm.pop().(*Boolean); !cnd.Value {
 				log.Println("false")
-				pc = int(binary.BigEndian.Uint16(vm.instructions[pc+1:]))
+				frame.ip = frame.readUint16(1)
+
 			} else {
 				log.Println("true")
-				pc += 3
+				frame.ip += 3
 			}
 
 		case OpSetGlobal:
 			log.Println("setGlobal")
-			idx := int(binary.BigEndian.Uint16(vm.instructions[pc+1:]))
+			idx := frame.readUint16(1)
 			vm.globals[idx] = vm.pop()
-			pc += 3
+			frame.ip += 3
 
 		case OpGetGlobal:
 			log.Println("getGlobal")
-			idx := int(binary.BigEndian.Uint16(vm.instructions[pc+1:]))
+			idx := frame.readUint16(1)
 			obj := vm.globals[idx]
 			vm.push(obj)
-			pc += 3
+			frame.ip += 3
+
+		case OpCall:
+			log.Println("call")
+			numParas := frame.readUint8(1)
+			fn := vm.stack[vm.stackIdx-1-numParas].(*CompiledFunction)
+			nextFrame := NewFrame(fn, vm.stackIdx-numParas)
+			// next Frame : important!!
+			vm.stackIdx = nextFrame.bp + nextFrame.fn.NumLocals
+			vm.pushFrame(nextFrame) // base pointer is current stack index
+			frame.ip += 2
+
+		case OpGetLocal:
+			log.Println("get local")
+			idx := frame.readUint8(1)
+			obj := vm.stack[frame.bp+idx]
+			vm.push(obj)
+			frame.ip += 2
+
+		case OpSetLocal:
+			log.Println("set local")
+			idx := frame.readUint8(1)
+			obj := vm.pop()
+			vm.stack[frame.bp+idx] = obj
+			frame.ip += 2
+
+		case OpReturnValue:
+			log.Println("return value")
+			result := vm.pop()
+			f := vm.popFrame()
+			vm.stack[f.bp-1] = result
+			vm.stackIdx = f.bp
 		}
+
 		// debug
-		iter++
-		if iter > 2048*1024 {
-			return fmt.Errorf("for ever")
-		}
+		// iter++
+		// if iter > 2048*1024 {
+		// 	return fmt.Errorf("for ever")
+		// }
 		// log.Printf("============= %dth iter pc=%d ==========", iter, pc)
+		log.Println("vm ------- globals : ")
 		for i := 0; i < 5; i++ {
-			fmt.Printf("%v , ", vm.globals[i])
+			log.Printf("%v , ", vm.globals[i])
 		}
 		// fmt.Println()
-		for i := 0; i < 10; i++ {
+		log.Println()
+		log.Println("vm ------- stack :  (stackIdx=)", vm.stackIdx)
+		for i := 0; i < vm.stackIdx; i++ {
 			log.Printf("%v ", vm.stack[i])
 		}
 		// log.Println()
 	}
-	log.Printf("============= final result ==========")
-	log.Println(vm.pop())
+	fmt.Println("============= final result ==========")
+	fmt.Println(vm.stackIdx)
+	fmt.Println(vm.pop())
 	return nil
 }
+
 func (vm *VM) integerInfix(code Opcode, left, right Object) {
 	l := left.(*Integer).Value
 	r := right.(*Integer).Value
@@ -150,6 +199,7 @@ func (vm *VM) integerInfix(code Opcode, left, right Object) {
 	}
 	vm.push(obj)
 }
+
 func (vm *VM) stringInfix(code Opcode, left, right Object) {
 	l := left.(*String).Value
 	r := right.(*String).Value
@@ -168,18 +218,34 @@ func (vm *VM) stringInfix(code Opcode, left, right Object) {
 	}
 	vm.push(obj)
 }
+
 func (vm *VM) push(obj Object) {
-	if vm.top > StackSize {
+	if vm.stackIdx > StackSize {
 		panic("stack overflow")
 	}
-	vm.stack[vm.top] = obj
-	vm.top++
+	vm.stack[vm.stackIdx] = obj
+	vm.stackIdx++
 }
 
 func (vm *VM) pop() Object {
-	if vm.top == 0 {
+	if vm.stackIdx == 0 {
 		panic("empty stack!")
 	}
-	vm.top -= 1
-	return vm.stack[vm.top]
+	vm.stackIdx--
+	return vm.stack[vm.stackIdx]
+}
+
+func (vm *VM) currentFrame() *Frame {
+	return vm.frames[len(vm.frames)-1]
+}
+
+func (vm *VM) pushFrame(f *Frame) {
+	vm.frames = append(vm.frames, f)
+}
+
+func (vm *VM) popFrame() *Frame {
+	f := vm.currentFrame()
+	vm.frames = vm.frames[:len(vm.frames)-1]
+	return f
+
 }

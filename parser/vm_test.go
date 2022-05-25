@@ -1,16 +1,17 @@
 package interpreter
 
 import (
+	"io"
 	"log"
 	"strings"
 	"testing"
 )
 
-func TestVM_Run(t *testing.T) {
+func TestVM_Run1(t *testing.T) {
 	input := `
 	1+2
 	2+3+4
-	5*2%7
+     5*2%7
 	(2+4/2)*(2+3)
 	!true	
 	`
@@ -46,8 +47,8 @@ func TestVM_Run2(t *testing.T) {
 
 func TestVM_Run3(t *testing.T) {
 	input := `
-	a = 1
-	b = 2
+	a := 1
+	b := 2
 	a + b
 	`
 	in := strings.NewReader(input)
@@ -64,10 +65,30 @@ func TestVM_Run3(t *testing.T) {
 }
 func TestVM_Run4(t *testing.T) {
 	input := `
-	a = 3
-	b = 1
+	a := 100
+	b := -100
 	if a > b {
-		2
+		a
+	} else if a < b {
+		b
+	} else {
+		0
+	}
+	a = -1000
+	if a > b {
+		100
+	} else if a < b {
+		-100
+	} else {
+		0
+	}
+	b = -1000
+	if a > b {
+		100
+	} else if a < b {
+		-100
+	} else {
+		0
 	}
 	`
 	in := strings.NewReader(input)
@@ -81,11 +102,10 @@ func TestVM_Run4(t *testing.T) {
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
-	// compiler.show()
 }
 func TestVM_Run5(t *testing.T) {
 	input := `
-	n = 1
+	n := 1
 	while n < 10 {
 		n = n + 1
 	}
@@ -108,8 +128,8 @@ func TestVM_Run5(t *testing.T) {
 }
 func TestVM_Run6(t *testing.T) {
 	input := `
-	n = 1
-	sum = 0
+	n := 1
+	sum := 0
 	while n <= 100 {
 		sum = sum + n
 		n = n + 1
@@ -130,4 +150,58 @@ func TestVM_Run6(t *testing.T) {
 
 	// log.Println("======   compiler instruction   ======")
 	// compiler.show()
+}
+
+func TestVM_Run7(t *testing.T) {
+	input := `
+	n := 2
+	add := func (x, y) {
+		x+y
+	}
+	add(1,2)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler()
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.bytecode())
+	vm.Run()
+
+}
+
+func TestVM_Run8(t *testing.T) {
+	log.SetOutput(io.Discard)
+	input := `
+	fib := func(n) {
+		if n <= 2 {
+			n
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	}
+	fib(35)  // 40s
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler()
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.bytecode())
+	vm.Run()
+
 }

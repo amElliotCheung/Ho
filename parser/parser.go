@@ -188,7 +188,7 @@ func (p *Parser) parseIfExpression() (Expression, error) {
 			}
 			p.advance()
 		} else {
-			cnd = &IntegerLiteral{Key: 1}
+			cnd = &BooleanLiteral{Key: true}
 		}
 
 		block, err := p.parseBlockExpression()
@@ -283,7 +283,8 @@ func (p *Parser) parseGroupedExpression() (Expression, error) {
 	p.skip("(")
 	expr, _ := p.parseExpression(LOWEST)
 	p.advance()
-	p.skip(")")
+	// (2+4/2)*(2+3)
+	// p.skip(")")
 	return expr, nil
 }
 func (p *Parser) parseInfixExpression(left Expression) (Expression, error) {

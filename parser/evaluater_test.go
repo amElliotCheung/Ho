@@ -98,3 +98,83 @@ func TestEvaluater_Eval5(t *testing.T) {
 	e := NewEvaluater(c)
 	e.Eval()
 }
+
+func TestEvaluater_Eval6(t *testing.T) {
+	input := `
+	fib := func (n) {
+		if n <= 2 {
+			n
+		} else {
+			fib(n-1)+fib(n-2)
+		}
+	}
+	fib(1)`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	c := make(chan Statement)
+	go parser.Parse(c)
+	e := NewEvaluater(c)
+	e.Eval()
+}
+
+func TestEvaluater_Eval7(t *testing.T) {
+	input := `
+	getFibArray := func(size) {
+		fib := func (n) {n <= 2 ? n : fib(n-1) + fib(n-2)}
+		n := 1
+		fibArray := []
+		while n <= size {
+			fibArray = append(fibArray, fib(n))
+			n = n + 1
+		}
+		fibArray
+	}
+	getFibArray(20)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	c := make(chan Statement)
+	go parser.Parse(c)
+	e := NewEvaluater(c)
+	e.Eval()
+}
+
+func TestEvaluater_Eval8(t *testing.T) {
+	input := `
+	makeAdder := func (x) {
+		func(y) {
+			x+y
+		}
+	}
+	fiveAdder := makeAdder(5)
+	fiveAdder(35)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	c := make(chan Statement)
+	go parser.Parse(c)
+	e := NewEvaluater(c)
+	e.Eval()
+}
+
+func TestEvaluater_Eval9(t *testing.T) {
+	input := `
+	makeAdder := func (x) {
+		func(y) {
+			x+y
+		}
+	}
+	fiveAdder := makeAdder(5)
+	fiveAdder(35)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	c := make(chan Statement)
+	go parser.Parse(c)
+	e := NewEvaluater(c)
+	e.Eval()
+}
