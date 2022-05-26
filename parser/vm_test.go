@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"io"
 	"log"
 	"strings"
 	"testing"
@@ -178,7 +177,7 @@ func TestVM_Run7(t *testing.T) {
 }
 
 func TestVM_Run8(t *testing.T) {
-	log.SetOutput(io.Discard)
+	// log.SetOutput(io.Discard)
 	input := `
 	fib := func(n) {
 		if n <= 2 {
@@ -187,7 +186,7 @@ func TestVM_Run8(t *testing.T) {
 			fib(n-1) + fib(n-2)
 		}
 	}
-	fib(35)  // 40s
+	fib(2)  // 40s
 	`
 	in := strings.NewReader(input)
 	lexer := NewLexer(in, regexPat)

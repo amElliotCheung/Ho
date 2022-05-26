@@ -1,93 +1,104 @@
-# Progress 5.18 (develop a language)
+# Progress 5.26 (develop a language)
 
 
-# Current
-- add functions to compiler and VM... difficult
-  
-## Interpreter
-- integer, array, string and functions
-- static type
-- first-class function
+## Current
+- added functions to compiler and VM
+#### some data structures used
+in compiler
+``` go
+type SymbalTable struct {
+	outer *SymbalTable
+	store map[string]*Symbol
+	size  int
+}
 
-```go
-	// find the 20 fibonacci numbers
-	// sure, in real life, we don't do it like this
+func NewEnclosedSymbalTable(outer *SymbalTable) *SymbalTable {
+	st := NewSymbolTable()
+	st.outer = outer
+	return st
+}
 
-	// getFibArray : a function which returns the fibonacci sequence of size "size".
-	getFibArray := func(size) {
-		// fib: a function, returns the n-th fibonacci number
-		fib := func (n) {n <= 2 ? n : fib(n-1) + fib(n-2)} 
-		n := 1
-		fibArray := [] // empty array
-		while n <= size {
-			fibArray = append(fibArray, fib(n))
-			n = n + 1
-		}
-		fibArray // return the last expression
+func (s *SymbalTable) Define(name string) *Symbol {
+	symbol := Symbol{Name: name, Scope: GlobalScope, Index: s.size}
+	if s.outer != nil {
+		symbol.Scope = LocalScope
 	}
-	getFibArray(20)
-```
-output
-```python
-[1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946]
+	s.store[name] = &symbol
+	s.size++
+	return &symbol
+}
 ```
 
-
-## map in java and golang
-- Java
-  - map is an interface
-  - hashmap is a class
-- Golang
-  - map is a keyword, to build a hard coded data structure
-  - hashmap under the hood
-  - it supports index opertor [] like array and slice in golang
+in virtual machine
+```go
+type Frame struct {
+	fn *CompiledFunction
+	ip int
+	bp int
+}
+type CompiledFunction struct {
+	Instructions Instructions
+	NumLocals    int
+	NumParas     int
+}
+```
+local variables are stored on stack
+```go
+3 : nil // top of stack
+2 : 2
+1 : 1 // base pointer
+0 : add() // result would be placed here
+```
+#### result
+```go
+	fib := func(n) {
+		if n <= 2 {
+			n
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	}
+	fib(35)  // 40s...very slow
+```
+## language feature
+- hope 
+  - a keyword to check correctness, particularly when we define a function
+  - we give parameters and expected answer
   
-  
-```java
-		HashMap<Integer, String> Sites = new HashMap<Integer, String>();
-        Sites.put(1, "Google");
-        Sites.get(1);
-        Sites.remove(1);
-		for (String i : people.keySet()) {
-			//...
-    	}
+```go
+	fib := func (n) {
+		if n <= 2 {
+			n
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	} hope {
+		1 -> 1
+		2 -> 2
+		3 -> 3
+	}
 ```
 ```go
-	sites := make(map[int]string) // or sites := map[int]string{}
-	sites[1] = "Google"
-	sites[1]
-	delete(sites, 1)
-	for k, v := range sites {
+	add := func(x, y) {
+		x + y
+	} hope {
+		1,2 -> 3
+		-1,0 -> -1
+	}
+```
+```go
+	//hope: 1 -> 1
+	//hope: 2 -> 2
+	//hope: 3 -> 3
+	fib := func (n) {
 		//...
 	}
 ```
-
-if we want a linkedHashMap in golang 
-
 ```go
-// interface{} is something like a point to any type
-type linkedHashMap struct {
-	table    map[interface{}]interface{}
-	ordering DoubleLinkedList // type "DoubleLinkedList" should be defined by user..
-}
-func (m *linkedHashMap) Put(key interface{}, value interface{}) {
-	//...
-}
-func (m *linkedHashMap) Get(key interface{}, value interface{}) {
-	//...
-}
-//...
-```
-[], range, make don't support user-defined structure, which means 
-```go
-	// impossible!!	
-	sites := make(linkedHashMap[int]string) 
-	...
-```
-```go
-	// the only way
-	sites := NewLinkedHashMap()
-	sites.put(1, "Google")
-	sites.get(1)
-
+	//hope: 1,2 -> 3
+	//hope: 2,4 -> 6
+	//hope: 3,3 -> 6
+	add := func (x, y) {
+		//...
+	}
 ```
