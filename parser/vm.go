@@ -20,7 +20,7 @@ type VM struct {
 
 func NewVM(bc Bytecode) *VM {
 	mainFn := &CompiledFunction{Instructions: bc.instructions}
-	mainFrame := NewFrame(mainFn, 0)
+	mainFrame := NewFrame(mainFn, 0, 0)
 
 	frames := []*Frame{mainFrame}
 
@@ -36,22 +36,27 @@ func NewVM(bc Bytecode) *VM {
 }
 
 func (vm *VM) Run() error {
-	// iter := 0
-	for frame := vm.currentFrame(); frame.ip < len(frame.fn.Instructions); frame = vm.currentFrame() {
-		op := Opcode(frame.fn.Instructions[frame.ip])
+	ip := 0
+	frame := vm.currentFrame()
+	ins := frame.fn.Instructions
+
+	for ip < len(ins) {
+
+		op := Opcode(ins[ip])
 		log.Println("\n\n\n===============================")
+
 		switch op {
 
 		case OpConstant:
 			log.Println("constant")
-			idx := frame.readUint16(1)
+			idx := ins.readUint16(ip + 1)
 			vm.push(vm.constants[idx])
-			frame.ip += 3
+			ip += 3
 
 		case OpPop:
 			log.Println("pop")
 			vm.pop()
-			frame.ip++
+			ip++
 
 		case OpAdd, OpSub, OpMult, OpDiv, OpMod, OpLt, OpGt, OpLte, OpGte, OpEq, OpNeq:
 			log.Println("add sub lt ...", OpAdd)
@@ -66,81 +71,85 @@ func (vm *VM) Run() error {
 			case STRING_OBJ:
 				vm.stringInfix(op, left, right)
 			}
-			frame.ip++
+			ip++
 
 		case OpMinus:
 			log.Println("minus")
 			right := vm.pop().(*Integer)
 			right.Value = -right.Value
 			vm.push(right)
-			frame.ip++
+			ip++
 
 		case OpBang:
 			log.Println("bang")
 			right := vm.pop().(*Boolean)
 			right.Value = !right.Value
 			vm.push(right)
-			frame.ip++
+			ip++
 
 		case OpJump:
 			log.Println("jump")
-			frame.ip = frame.readUint16(1)
+			ip = ins.readUint16(ip + 1)
 
 		case OpJumpIfFalse:
 			log.Println("jumpIfFalse")
 
 			if cnd := vm.pop().(*Boolean); !cnd.Value {
 				log.Println("false")
-				frame.ip = frame.readUint16(1)
+				ip = ins.readUint16(ip + 1)
 
 			} else {
 				log.Println("true")
-				frame.ip += 3
+				ip += 3
 			}
 
 		case OpSetGlobal:
 			log.Println("setGlobal")
-			idx := frame.readUint16(1)
+			idx := ins.readUint16(ip + 1)
 			vm.globals[idx] = vm.pop()
-			frame.ip += 3
+			ip += 3
 
 		case OpGetGlobal:
 			log.Println("getGlobal")
-			idx := frame.readUint16(1)
+			idx := ins.readUint16(ip + 1)
 			obj := vm.globals[idx]
 			vm.push(obj)
-			frame.ip += 3
-
-		case OpCall:
-			log.Println("call")
-			numParas := frame.readUint8(1)
-			fn := vm.stack[vm.stackIdx-1-numParas].(*CompiledFunction)
-			nextFrame := NewFrame(fn, vm.stackIdx-numParas)
-			// next Frame : important!!
-			vm.stackIdx = nextFrame.bp + nextFrame.fn.NumLocals
-			vm.pushFrame(nextFrame) // base pointer is current stack index
-			frame.ip += 2
+			ip += 3
 
 		case OpGetLocal:
 			log.Println("get local")
-			idx := frame.readUint8(1)
+			idx := ins.readUint8(ip + 1)
 			obj := vm.stack[frame.bp+idx]
 			vm.push(obj)
-			frame.ip += 2
+			ip += 2
 
 		case OpSetLocal:
 			log.Println("set local")
-			idx := frame.readUint8(1)
+			idx := ins.readUint8(ip + 1)
 			obj := vm.pop()
 			vm.stack[frame.bp+idx] = obj
-			frame.ip += 2
+			ip += 2
+
+		case OpCall:
+			log.Println("call")
+			numParas := ins.readUint8(ip + 1)
+			fn := vm.stack[vm.stackIdx-1-numParas].(*CompiledFunction)
+			nextFrame := NewFrame(fn, ip+2, vm.stackIdx-numParas)
+			// next Frame : important!!
+			vm.stackIdx = nextFrame.bp + nextFrame.fn.NumLocals
+			vm.pushFrame(nextFrame) // base pointer is current stack index
+			ip, frame = 0, vm.currentFrame()
+			ins = frame.fn.Instructions
 
 		case OpReturnValue:
 			log.Println("return value")
 			result := vm.pop()
+			// go back to last frame
 			f := vm.popFrame()
 			vm.stack[f.bp-1] = result
 			vm.stackIdx = f.bp
+			ip, frame = f.ip, vm.currentFrame()
+			ins = frame.fn.Instructions
 		}
 
 		// debug

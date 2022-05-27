@@ -6,8 +6,6 @@ import (
 	"log"
 )
 
-type Instructions []byte
-
 type CompilationScope struct {
 	instructions Instructions
 
