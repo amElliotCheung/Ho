@@ -2,7 +2,8 @@
 
 
 ## Current
-- added functions to compiler and VM
+- change ip to a local variable in vm.Run()
+- 
 #### some data structures used
 in compiler
 ``` go
