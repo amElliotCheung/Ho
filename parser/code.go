@@ -36,6 +36,7 @@ const (
 	// function
 	OpCall
 	OpReturnValue
+	OpHope
 )
 
 const (

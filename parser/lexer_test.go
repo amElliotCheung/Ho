@@ -13,7 +13,9 @@ func TestLexer_Read(t *testing.T) {
 	d := "a\n\n\n"
 	afunc := func(){}
 	array := {1,b,c,d,afunc}
-	array[2]`
+	array[2]
+	1,2 -> 3
+	hope`
 	in := strings.NewReader(input)
 	lexer := NewLexer(in, regexPat)
 

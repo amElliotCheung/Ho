@@ -40,6 +40,7 @@ const (
 	WHILE    = "while"
 	TRUE     = "true"
 	FALSE    = "false"
+	HOPE     = "hope"
 )
 
 type Token interface {

@@ -101,6 +101,7 @@ func (ie IndexExpression) String() string {
 type FunctionLiteral struct {
 	Parameters []*IdentifierLiteral
 	Execute    *BlockExpression
+	Hopes      *HopeBlock
 }
 
 func (f FunctionLiteral) String() string {
@@ -118,8 +119,44 @@ func (f FunctionLiteral) String() string {
 	out.WriteString(RPAREN)
 	out.WriteString(f.Execute.String())
 
+	out.WriteString(f.Hopes.String())
 	return out.String()
 
+}
+
+type HopeBlock struct {
+	HopeExpressions []HopeExpression
+}
+
+func (hb *HopeBlock) String() string {
+	res := ""
+	for _, expr := range hb.HopeExpressions {
+		res += expr.String() + "\n"
+	}
+	return res
+}
+
+type HopeExpression struct {
+	Parameters []Expression
+	Expected   Expression
+}
+
+func (hp *HopeExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString(reflect.TypeOf(hp).String())
+
+	out.WriteString(LPAREN)
+
+	paras := []string{}
+	for _, p := range hp.Parameters {
+		paras = append(paras, p.String())
+	}
+	out.WriteString(strings.Join(paras, ","))
+
+	out.WriteString(RPAREN)
+	out.WriteString("->" + hp.Expected.String())
+
+	return out.String()
 }
 
 // =========== Call Expression

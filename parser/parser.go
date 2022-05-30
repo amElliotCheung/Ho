@@ -35,7 +35,8 @@ var precedences = map[string]int{
 	"(":  CALL,
 	"?":  QUESTIONMARK,
 	"=":  ASSIGNPRE,
-	"[":  INDEX,
+
+	"[": INDEX,
 }
 
 type (
@@ -310,6 +311,29 @@ func (p *Parser) parseTernaryExpression(condition Expression) (Expression, error
 	return ternary, nil
 }
 
+func (p *Parser) parseHopeBlock() (*HopeBlock, error) {
+	p.skip("{")
+	hopeBlock := &HopeBlock{
+		HopeExpressions: make([]HopeExpression, 0),
+	}
+	for !p.checkCur(RBRACE) {
+		if p.cur == EOL {
+			p.advance()
+			continue
+		}
+		hpe := HopeExpression{}
+		hpe.Parameters, _ = p.parseExpressionList("->")
+		log.Printf("++\n\nafter parse parameters %v %v\n\n++", p.cur, p.next)
+		p.skip("->")
+		// should advance() after parseExpression
+		hpe.Expected, _ = p.parseExpression(LOWEST)
+		p.advance()
+		log.Printf("++\n\nafter parse answer %v %v\n\n++", p.cur, p.next)
+		hopeBlock.HopeExpressions = append(hopeBlock.HopeExpressions, hpe)
+	}
+	p.skip("}")
+	return hopeBlock, nil
+}
 func (p *Parser) parseIndexExpression(left Expression) (Expression, error) {
 	expr := &IndexExpression{
 		Left: left,
@@ -339,13 +363,13 @@ func (p *Parser) parseExpressionList(end string) ([]Expression, error) {
 		return list, nil
 	}
 	for {
-		log.Println("expressionList:", p.cur, p.next)
+		log.Printf("before parse expressionList p.cur=%v, p.next=%v\n", p.cur, p.next)
 		expr, _ := p.parseExpression(LOWEST)
-		log.Println("expressionList: expr", expr, p.cur, p.next)
+		log.Printf("after parse expressionList p.cur=%v, p.next=%v\n", p.cur, p.next)
 
 		list = append(list, expr)
 		p.advance()
-		log.Println("expressionList after advance", p.cur, p.next)
+		log.Printf("expressionList: after advance p.cur=%v, p.next=%v\n", p.cur, p.next)
 
 		if p.checkCur(end) {
 			return list, nil
@@ -372,9 +396,17 @@ func (p *Parser) parseFunction() (Expression, error) {
 	paras, _ := p.parseIdentifierList()
 	p.skip(RPAREN)
 	exec, _ := p.parseBlockExpression()
+
+	var hopes *HopeBlock
+	hopes = nil
+	if p.checkCur("hope") {
+		p.skip("hope")
+		hopes, _ = p.parseHopeBlock()
+	}
 	return &FunctionLiteral{
 		Parameters: paras,
 		Execute:    exec,
+		Hopes:      hopes,
 	}, nil
 }
 func (p *Parser) parseIdentifierList() ([]*IdentifierLiteral, error) {
@@ -461,6 +493,7 @@ func (p *Parser) curPrecedence() int {
 }
 
 func (p *Parser) checkCur(expt string) bool {
+	log.Printf("checkCur %v, %v\n", p.cur.Literal(), expt)
 	return p.cur.Literal() == expt
 }
 

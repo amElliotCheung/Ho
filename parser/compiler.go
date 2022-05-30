@@ -82,9 +82,23 @@ func (c *Compiler) Compile(node ASTNode) error {
 			NumParas:     len(node.Parameters),
 		}
 		log.Println("compiler functionliteral ---->", compiledFn)
+
 		c.leaveScope()
 		idx := c.addConstant(&compiledFn)
 		c.emit(OpConstant, idx)
+
+		// add hope
+		for i, hopeExpr := range node.Hopes.HopeExpressions {
+			c.emit(OpConstant, idx)
+			for _, para := range hopeExpr.Parameters {
+				c.Compile(para)
+			}
+			c.emit(OpCall, len(node.Parameters))
+			c.Compile(hopeExpr.Expected)
+			// 1 means the length of the expected answer
+			// for now, function returns only one value
+			c.emit(OpHope, i+1)
+		}
 		// return nil
 
 	case *CallExpression:
@@ -192,12 +206,10 @@ func (c *Compiler) emit(op Opcode, operands ...int) {
 		operand := uint16(operands[0])
 		ins = append(ins, byte(operand>>8))
 		ins = append(ins, byte(operand))
-	case OpGetLocal, OpSetLocal:
+	case OpGetLocal, OpSetLocal, OpCall, OpHope:
 		operand := byte(operands[0])
 		ins = append(ins, operand)
-	case OpCall:
-		operand := byte(operands[0])
-		ins = append(ins, operand)
+
 	// no-operand opcode
 	case OpPop:
 	case OpAdd, OpSub, OpMult, OpDiv, OpMod:

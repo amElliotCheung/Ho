@@ -150,6 +150,16 @@ func (vm *VM) Run() error {
 			vm.stackIdx = f.bp
 			ip, frame = f.ip, vm.currentFrame()
 			ins = frame.fn.Instructions
+
+		case OpHope:
+			log.Println("hope")
+			id := ins.readUint8(ip + 1)
+			expected := vm.pop()
+			got := vm.pop()
+			if expected != got {
+				fmt.Printf("want %v, got %v in the %d-th test case\n", expected, got, id)
+			}
+			ip += 2
 		}
 
 		// debug
