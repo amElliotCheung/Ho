@@ -14,6 +14,7 @@ import (
 // ==================== ASTNode Interface
 type ASTNode interface {
 	String() string
+	Type() string
 }
 
 // ==================== Statement Interface
@@ -279,7 +280,8 @@ type IfExpression struct {
 	executes   []*BlockExpression
 }
 
-func (ie IfExpression) addPair(cnd Expression, block *BlockExpression) {
+// must be a pointer!
+func (ie *IfExpression) addPair(cnd Expression, block *BlockExpression) {
 	ie.conditions = append(ie.conditions, cnd)
 	ie.executes = append(ie.executes, block)
 }

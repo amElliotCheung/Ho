@@ -33,7 +33,7 @@ type Compiler struct {
 	currentFuncHash map[string][16]byte
 }
 
-func NewCompiler() *Compiler {
+func NewCompiler(productive bool) *Compiler {
 	mainScope := CompilationScope{
 		instructions:   make(Instructions, 0),
 		jumpPos:        make([]int, 0),
@@ -62,9 +62,10 @@ func NewCompiler() *Compiler {
 		operator2code:   operator2code,
 		lastFuncHash:    make(map[string][16]byte),
 		currentFuncHash: make(map[string][16]byte),
+		productive:      productive,
 	}
 }
-func (c *Compiler) Compile(node ASTNode, names ...string) error {
+func (c *Compiler) Compile(node ASTNode) error {
 	switch node := node.(type) {
 
 	case *Program:
@@ -73,6 +74,7 @@ func (c *Compiler) Compile(node ASTNode, names ...string) error {
 		}
 		// write file
 		// name, hash pair
+		c.show()
 		log.Println(c.currentInstructions())
 		data, _ := json.Marshal(c.currentFuncHash)
 		os.WriteFile("testedFunctions.json", data, fs.ModePerm)
@@ -93,36 +95,16 @@ func (c *Compiler) Compile(node ASTNode, names ...string) error {
 		c.emit(OpReturnValue)
 		log.Println("compiler functionliteral ---->", c.currentInstructions(), c.symbolTable.size, len(node.Parameters))
 		// compiledFn := &CompiledFunction{ is wrong!!!
+
 		compiledFn := CompiledFunction{
 			Instructions: c.currentInstructions(),
 			NumLocals:    c.symbolTable.size,
 			NumParas:     len(node.Parameters),
 		}
 		log.Println("compiler functionliteral ---->", compiledFn)
-
 		c.leaveScope()
 		idx := c.addConstant(&compiledFn)
 		c.emit(OpConstant, idx)
-
-		// add hope
-		if c.productive ||
-			node.Hopes == nil ||
-			c.isFunctionTested(names[0], node) {
-			return nil
-		}
-
-		for i, hopeExpr := range node.Hopes.HopeExpressions {
-			c.emit(OpConstant, idx)
-			for _, para := range hopeExpr.Parameters {
-				c.Compile(para)
-			}
-			c.emit(OpCall, len(node.Parameters))
-			c.Compile(hopeExpr.Expected)
-			// 1 means the length of the expected answer
-			// for now, function returns only one value
-			c.emit(OpHope, i+1)
-		}
-		// return nil
 
 	case *CallExpression:
 		c.Compile(node.Function)
@@ -134,12 +116,39 @@ func (c *Compiler) Compile(node ASTNode, names ...string) error {
 	case *DefineExpression:
 		symbol := c.addVariable(node.Ident.Key) // return symbol
 
-		c.Compile(node.Expr, node.Ident.Key)
+		c.Compile(node.Expr)
 
 		if symbol.Scope == GlobalScope {
 			c.emit(OpSetGlobal, symbol.Index)
 		} else if symbol.Scope == LocalScope {
 			c.emit(OpSetLocal, symbol.Index)
+		}
+
+		// add hope
+		if node.Expr.Type() == "FunctionLiteral" {
+			fn := node.Expr.(*FunctionLiteral)
+
+			if c.productive ||
+				fn.Hopes == nil ||
+				c.isFunctionTested(symbol.Name, fn) {
+				return nil
+			}
+			for i, hopeExpr := range fn.Hopes.HopeExpressions {
+				if symbol.Scope == GlobalScope {
+					c.emit(OpGetGlobal, symbol.Index)
+				} else if symbol.Scope == LocalScope {
+					c.emit(OpGetLocal, symbol.Index)
+				}
+				for _, para := range hopeExpr.Parameters {
+					c.Compile(para)
+				}
+				c.emit(OpCall, len(fn.Parameters))
+				c.Compile(hopeExpr.Expected)
+				// 1 means the length of the expected answer
+				// for now, function returns only one value
+				c.emit(OpHope, i+1)
+			}
+			// return nil
 		}
 
 	case *AssignExpression:
@@ -246,7 +255,7 @@ func (c *Compiler) emit(op Opcode, operands ...int) {
 	// fmt.Println("emit debug", c.scopes[len(c.scopes)-1].instructions)
 	// fmt.Println("scope = ", len(c.scopes)-1)
 	// fmt.Println("constants = ", c.constants)
-	fmt.Println()
+	log.Println()
 }
 
 // it reserves operand for an op, particular, Jump
@@ -380,7 +389,7 @@ func (c *Compiler) show() {
 
 		case OpJump:
 			log.Println("compiler --- > jump  ", c.currentInstructions()[pc:pc+3])
-			pc = int(binary.BigEndian.Uint16(c.currentInstructions()[pc+1:]))
+			pc += 3
 
 		case OpJumpIfFalse:
 

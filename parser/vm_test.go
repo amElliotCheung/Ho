@@ -23,7 +23,7 @@ func TestVM_Run1(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
@@ -40,7 +40,7 @@ func TestVM_Run2(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
@@ -59,7 +59,7 @@ func TestVM_Run3(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
@@ -99,7 +99,7 @@ func TestVM_Run4(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
@@ -119,7 +119,7 @@ func TestVM_Run5(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
@@ -144,7 +144,7 @@ func TestVM_Run6(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
@@ -168,7 +168,7 @@ func TestVM_Run7(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 
 	compiler.show()
@@ -197,7 +197,7 @@ func TestVM_Run8(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 
 	compiler.show()
@@ -224,7 +224,7 @@ func TestVM_Run9(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 
 	compiler.show()
@@ -253,7 +253,7 @@ func TestVM_Run10(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 
 	compiler.show()
@@ -263,8 +263,8 @@ func TestVM_Run10(t *testing.T) {
 }
 
 func TestVM_Run11(t *testing.T) {
+	// log.SetOutput(os.Stdout)
 	log.SetOutput(io.Discard)
-
 	input := `
 	fib := func(n) {
 		if n <= 2{
@@ -273,13 +273,11 @@ func TestVM_Run11(t *testing.T) {
 			fib(n-1) + fib(n-2)
 		}
 	} hope {
-		10 -> 89
-		10 -> 89
-		10 -> 89
-		10 -> 89
-		10 -> 89
+		3 -> 3
+		4 -> 5
+		6 -> 7
 	}
-	fib(4)
+	fib(3)
 	`
 	in := strings.NewReader(input)
 	lexer := NewLexer(in, regexPat)
@@ -288,7 +286,7 @@ func TestVM_Run11(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	compiler := NewCompiler()
+	compiler := NewCompiler(false)
 	compiler.Compile(node)
 
 	compiler.show()

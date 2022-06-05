@@ -40,6 +40,8 @@ func (vm *VM) Run() error {
 	frame := vm.currentFrame()
 	ins := frame.fn.Instructions
 
+	log.Println("vm start!")
+
 	for ip < len(ins) {
 
 		op := Opcode(ins[ip])
@@ -188,7 +190,6 @@ func (vm *VM) Run() error {
 		// log.Println()
 	}
 	fmt.Println("============= final result ==========")
-	fmt.Println(vm.stackIdx)
 	fmt.Println(vm.pop())
 	return nil
 }
