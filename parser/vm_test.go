@@ -3,6 +3,7 @@ package interpreter
 import (
 	"io"
 	"log"
+	"os"
 	"strings"
 	"testing"
 )
@@ -204,4 +205,94 @@ func TestVM_Run8(t *testing.T) {
 	vm := NewVM(compiler.bytecode())
 	vm.Run()
 
+}
+
+func TestVM_Run9(t *testing.T) {
+	// log.SetOutput(io.Discard)
+	log.SetOutput(os.Stdout)
+	input := `
+	if 2 > 1 {
+		2
+	} else{
+		1
+	}
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler()
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.bytecode())
+	vm.Run()
+}
+
+func TestVM_Run10(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	input := `
+	fib := func(n) {
+		if n <= 2{
+			n
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	}
+	fib(10)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler()
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.bytecode())
+	vm.Run()
+}
+
+func TestVM_Run11(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	input := `
+	fib := func(n) {
+		if n <= 2{
+			n
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	} hope {
+		10 -> 89
+		10 -> 89
+		10 -> 89
+		10 -> 89
+		10 -> 89
+	}
+	fib(4)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler()
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.bytecode())
+	vm.Run()
 }

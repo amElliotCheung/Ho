@@ -1,9 +1,13 @@
 package interpreter
 
 import (
+	"crypto/md5"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
+	"os"
 )
 
 type CompilationScope struct {
@@ -22,6 +26,11 @@ type Compiler struct {
 
 	// for convience, when generate byte code
 	operator2code map[string]Opcode
+
+	productive bool
+
+	lastFuncHash    map[string][16]byte
+	currentFuncHash map[string][16]byte
 }
 
 func NewCompiler() *Compiler {
@@ -30,6 +39,7 @@ func NewCompiler() *Compiler {
 		jumpPos:        make([]int, 0),
 		jumpIfFalsePos: 0,
 	}
+
 	operator2code := map[string]Opcode{PLUS: OpAdd,
 		MINUS:    OpSub,
 		ASTERISK: OpMult,
@@ -46,19 +56,26 @@ func NewCompiler() *Compiler {
 	}
 
 	return &Compiler{
-		scopes:        []CompilationScope{mainScope},
-		constants:     make([]Object, 0),
-		symbolTable:   NewSymbolTable(),
-		operator2code: operator2code,
+		scopes:          []CompilationScope{mainScope},
+		constants:       make([]Object, 0),
+		symbolTable:     NewSymbolTable(),
+		operator2code:   operator2code,
+		lastFuncHash:    make(map[string][16]byte),
+		currentFuncHash: make(map[string][16]byte),
 	}
 }
-func (c *Compiler) Compile(node ASTNode) error {
+func (c *Compiler) Compile(node ASTNode, names ...string) error {
 	switch node := node.(type) {
 
 	case *Program:
 		for _, stmt := range node.Statements {
 			c.Compile(stmt)
 		}
+		// write file
+		// name, hash pair
+		log.Println(c.currentInstructions())
+		data, _ := json.Marshal(c.currentFuncHash)
+		os.WriteFile("testedFunctions.json", data, fs.ModePerm)
 
 	case *BlockExpression:
 		for _, stmt := range node.Statements {
@@ -88,6 +105,12 @@ func (c *Compiler) Compile(node ASTNode) error {
 		c.emit(OpConstant, idx)
 
 		// add hope
+		if c.productive ||
+			node.Hopes == nil ||
+			c.isFunctionTested(names[0], node) {
+			return nil
+		}
+
 		for i, hopeExpr := range node.Hopes.HopeExpressions {
 			c.emit(OpConstant, idx)
 			for _, para := range hopeExpr.Parameters {
@@ -111,7 +134,8 @@ func (c *Compiler) Compile(node ASTNode) error {
 	case *DefineExpression:
 		symbol := c.addVariable(node.Ident.Key) // return symbol
 
-		c.Compile(node.Expr)
+		c.Compile(node.Expr, node.Ident.Key)
+
 		if symbol.Scope == GlobalScope {
 			c.emit(OpSetGlobal, symbol.Index)
 		} else if symbol.Scope == LocalScope {
@@ -297,6 +321,23 @@ func (c *Compiler) addConstant(obj Object) int {
 	return len(c.constants) - 1
 }
 
+func (c *Compiler) currentInstructions() Instructions {
+	return c.scopes[len(c.scopes)-1].instructions
+}
+
+func (c *Compiler) isFunctionTested(name string, node *FunctionLiteral) bool {
+	text := node.String()
+	curHash := md5.Sum([]byte(text))
+
+	c.currentFuncHash[name] = curHash
+
+	lastHash, ok := c.lastFuncHash[name]
+	if !ok || curHash != lastHash {
+		return false
+	}
+	return true
+}
+
 // output result to virual machine
 type Bytecode struct {
 	instructions Instructions
@@ -308,10 +349,6 @@ func (c *Compiler) bytecode() Bytecode {
 		instructions: c.currentInstructions(),
 		constants:    c.constants,
 	}
-}
-
-func (c *Compiler) currentInstructions() Instructions {
-	return c.scopes[len(c.scopes)-1].instructions
 }
 
 // debug

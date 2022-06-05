@@ -156,8 +156,15 @@ func (vm *VM) Run() error {
 			id := ins.readUint8(ip + 1)
 			expected := vm.pop()
 			got := vm.pop()
-			if expected != got {
+			if expected.Type() != got.Type() {
 				fmt.Printf("want %v, got %v in the %d-th test case\n", expected, got, id)
+			} else {
+				switch expected.Type() {
+				case INTEGER_OBJ:
+					if expected.(*Integer).Value != got.(*Integer).Value {
+						fmt.Printf("want %v, got %v in the %d-th test case\n", expected, got, id)
+					}
+				}
 			}
 			ip += 2
 		}

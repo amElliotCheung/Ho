@@ -1,74 +1,80 @@
-# Progress 5.26 (develop a language)
-
-
-## Current
-- change ip to a local variable in vm.Run()
-- 
-#### some data structures used
-in compiler
+# Progress 6.1 (develop Ho language)
+## Finished
+#### changed ip to a local variable in vm.Run()
 ``` go
-type SymbalTable struct {
-	outer *SymbalTable
-	store map[string]*Symbol
-	size  int
-}
+	ip := 0
+	frame := vm.currentFrame()
+	ins := frame.fn.Instructions
+	
+	for ip < len(ins) {
+		op := Opcode(ins[ip])
+		switch op {
+			//......
 
-func NewEnclosedSymbalTable(outer *SymbalTable) *SymbalTable {
-	st := NewSymbolTable()
-	st.outer = outer
-	return st
-}
+		case OpCall:
+			nextFrame := NewFrame(fn, ip+2, vm.stackIdx-numParas)
+			//......
+			vm.pushFrame(nextFrame)
+			ip, frame = 0, vm.currentFrame()
 
-func (s *SymbalTable) Define(name string) *Symbol {
-	symbol := Symbol{Name: name, Scope: GlobalScope, Index: s.size}
-	if s.outer != nil {
-		symbol.Scope = LocalScope
-	}
-	s.store[name] = &symbol
-	s.size++
-	return &symbol
-}
-```
-
-in virtual machine
-```go
-type Frame struct {
-	fn *CompiledFunction
-	ip int
-	bp int
-}
-type CompiledFunction struct {
-	Instructions Instructions
-	NumLocals    int
-	NumParas     int
-}
-```
-local variables are stored on stack
-```go
-3 : nil // top of stack
-2 : 2
-1 : 1 // base pointer
-0 : add() // result would be placed here
-```
-#### result
-```go
-	fib := func(n) {
-		if n <= 2 {
-			n
-		} else {
-			fib(n-1) + fib(n-2)
+		case OpReturnValue:
+			//......
+			f := vm.popFrame()
+			vm.stack[f.bp-1] = result
+			vm.stackIdx = f.bp
+			ip, frame = f.ip, vm.currentFrame()
+			ins = frame.fn.Instructions
 		}
 	}
-	fib(35)  // 40s...very slow
 ```
-## language feature
-- hope 
-  - a keyword to check correctness, particularly when we define a function
-  - we give parameters and expected answer
-  
+
+#### added keyword "hope"
+- add an instruction "OpHope"
+
+- changed AST
 ```go
-	fib := func (n) {
-		if n <= 2 {
+type FunctionLiteral struct {
+	Parameters []*IdentifierLiteral
+	Execute    *BlockExpression
+	Hopes      *HopeBlock
+}
+type HopeBlock struct {
+	HopeExpressions []HopeExpression
+}
+type HopeExpression struct {
+	Parameters []Expression
+	Expected   Expression
+}
+```
+When we compile a function literal
+```go
+	for i, hopeExpr := range node.Hopes.HopeExpressions {
+			c.emit(OpConstant, idx)
+			for _, para := range hopeExpr.Parameters {
+				c.Compile(para)
+			}
+			c.emit(OpCall, len(node.Parameters))
+			c.Compile(hopeExpr.Expected)
+			// 1 means the length of the expected answer
+			// for now, function returns only one value
+			c.emit(OpHope, i+1) // i+1 is the id of the test case
+		}
+```
+
+```Go
+	add := func(x,y) {
+		x
+	} hope {
+		-100, 100 -> 0
+		0,0 -> 0
+		0, 1 -> 1
+		fuzzing 5
+	}
+	add(1,0)
+```
+```Go
+	fib := func(n) {
+		if n <= 2{
 			n
 		} else {
 			fib(n-1) + fib(n-2)
@@ -76,30 +82,13 @@ local variables are stored on stack
 	} hope {
 		1 -> 1
 		2 -> 2
-		3 -> 3
+		10 -> 89
 	}
 ```
-```go
-	add := func(x, y) {
-		x + y
-	} hope {
-		1,2 -> 3
-		-1,0 -> -1
-	}
+Just gives warning information and wouldn't influence the main execution
 ```
-```go
-	//hope: 1 -> 1
-	//hope: 2 -> 2
-	//hope: 3 -> 3
-	fib := func (n) {
-		//...
-	}
-```
-```go
-	//hope: 1,2 -> 3
-	//hope: 2,4 -> 6
-	//hope: 3,3 -> 6
-	add := func (x, y) {
-		//...
-	}
+want 0, got -100 in the 1-th test case
+want 1, got 0 in the 3-th test case
+============= final result ==========
+1
 ```

@@ -94,3 +94,24 @@ func TestParser_Parse5(t *testing.T) {
 	t.Log("================ parse ERROR =============\n ", err)
 
 }
+
+func TestParser_Parse6(t *testing.T) {
+	input := `fib := func(n) {
+			if n <= 2{
+				n
+			} else {
+				fib(n-1) + fib(n-2)
+			}
+		} hope {
+			0 -> 0	
+			1 -> 1
+			2 -> 2
+		}`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in, regexPat)
+	parser := NewParser(lexer)
+	root, err := parser.Parse(nil)
+	t.Log("================ parse root =============\n ", root)
+	t.Log("================ parse ERROR =============\n ", err)
+
+}
