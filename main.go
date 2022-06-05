@@ -1,21 +1,41 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"io"
 	"log"
+	"os"
+	"strings"
+
+	"stone/interpreter"
 )
 
+// the package name must be the same as foldername
 func main() {
-	log.SetFlags(0) // no prefix
-	// lexer_test("./sum2.txt")
-	// lexer_test("./sourcecode.txt")
-	// parser_test("./sourcecode.txt")
-	// go evaluater_test("./evaluation.txt")
-	// evaluater_test("./fact.txt")
-	// evaluater_test("./ternary.txt")
-	// evaluater_test("./sum.txt")
-	// parser_test("./sum2.txt")
-	// evaluater_test("./sum2.txt")
-	// evaluater_test("./sum2.txt")
+	log.SetOutput(io.Discard)
+
+	filename := flag.String("f", "sourcecode.txt", "the file containing source code")
+	productive := flag.Bool("p", false, "the compiler would ignore hope block if this variable is true")
+	flag.Parse()
+
+	input, err := os.ReadFile(*filename)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	in := strings.NewReader(string(input))
+	lexer := interpreter.NewLexer(in)
+	parser := interpreter.NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := interpreter.NewCompiler(*productive)
+	compiler.Compile(node)
+
+	vm := interpreter.NewVM(compiler.Bytecode())
+	vm.Run()
 
 }
 

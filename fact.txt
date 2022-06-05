@@ -1,8 +1,0 @@
-// compute 5!
-n = 5
-f = 1
-while n {
-    f = f * n
-    n = n - 1
-}
-f

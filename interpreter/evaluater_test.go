@@ -17,7 +17,7 @@ func TestEvaluater_Eval(t *testing.T) {
 	d := " two"
 	adder(c, d)`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -35,7 +35,7 @@ func TestEvaluater_Eval2(t *testing.T) {
 	b := 1
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -53,7 +53,7 @@ func TestEvaluater_Eval3(t *testing.T) {
 	3 > 5
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -69,7 +69,7 @@ func TestEvaluater_Eval4(t *testing.T) {
 	a[9]
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -91,7 +91,7 @@ func TestEvaluater_Eval5(t *testing.T) {
 	fib(50)
 	add("one", "+two")`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -110,7 +110,7 @@ func TestEvaluater_Eval6(t *testing.T) {
 	}
 	fib(1)`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -133,7 +133,7 @@ func TestEvaluater_Eval7(t *testing.T) {
 	getFibArray(20)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -152,7 +152,7 @@ func TestEvaluater_Eval8(t *testing.T) {
 	fiveAdder(35)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)
@@ -171,7 +171,7 @@ func TestEvaluater_Eval9(t *testing.T) {
 	fiveAdder(35)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	c := make(chan Statement)
 	go parser.Parse(c)

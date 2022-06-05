@@ -291,5 +291,5 @@ func (e *Evaluater) applyFunction(fn Object, args []Object) Object {
 // ==================== helper functions
 func (e *Evaluater) isTure(node ASTNode) bool {
 	res := e.eval(node).(*Boolean)
-	return res.Value == true
+	return res.Value
 }

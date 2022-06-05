@@ -34,6 +34,11 @@ type Compiler struct {
 }
 
 func NewCompiler(productive bool) *Compiler {
+	lastFuncHash := make(map[string][16]byte)
+	data, err := os.ReadFile("./testedFunctions.json")
+	if err == nil {
+		json.Unmarshal(data, &lastFuncHash)
+	}
 	mainScope := CompilationScope{
 		instructions:   make(Instructions, 0),
 		jumpPos:        make([]int, 0),
@@ -57,10 +62,10 @@ func NewCompiler(productive bool) *Compiler {
 
 	return &Compiler{
 		scopes:          []CompilationScope{mainScope},
-		constants:       make([]Object, 0),
+		constants:       make([]Object, 0, 1024),
 		symbolTable:     NewSymbolTable(),
 		operator2code:   operator2code,
-		lastFuncHash:    make(map[string][16]byte),
+		lastFuncHash:    lastFuncHash,
 		currentFuncHash: make(map[string][16]byte),
 		productive:      productive,
 	}
@@ -74,8 +79,6 @@ func (c *Compiler) Compile(node ASTNode) error {
 		}
 		// write file
 		// name, hash pair
-		c.show()
-		log.Println(c.currentInstructions())
 		data, _ := json.Marshal(c.currentFuncHash)
 		os.WriteFile("testedFunctions.json", data, fs.ModePerm)
 
@@ -337,14 +340,10 @@ func (c *Compiler) currentInstructions() Instructions {
 func (c *Compiler) isFunctionTested(name string, node *FunctionLiteral) bool {
 	text := node.String()
 	curHash := md5.Sum([]byte(text))
-
 	c.currentFuncHash[name] = curHash
 
 	lastHash, ok := c.lastFuncHash[name]
-	if !ok || curHash != lastHash {
-		return false
-	}
-	return true
+	return ok && curHash == lastHash
 }
 
 // output result to virual machine
@@ -353,7 +352,7 @@ type Bytecode struct {
 	constants    []Object
 }
 
-func (c *Compiler) bytecode() Bytecode {
+func (c *Compiler) Bytecode() Bytecode {
 	return Bytecode{
 		instructions: c.currentInstructions(),
 		constants:    c.constants,

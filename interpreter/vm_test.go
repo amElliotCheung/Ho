@@ -17,7 +17,7 @@ func TestVM_Run1(t *testing.T) {
 	!true	
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -25,7 +25,7 @@ func TestVM_Run1(t *testing.T) {
 	}
 	compiler := NewCompiler(false)
 	compiler.Compile(node)
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
 func TestVM_Run2(t *testing.T) {
@@ -34,7 +34,7 @@ func TestVM_Run2(t *testing.T) {
 	!("one" + "two" == "onetwo")	
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -42,7 +42,7 @@ func TestVM_Run2(t *testing.T) {
 	}
 	compiler := NewCompiler(false)
 	compiler.Compile(node)
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
 
@@ -53,7 +53,7 @@ func TestVM_Run3(t *testing.T) {
 	a + b
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestVM_Run3(t *testing.T) {
 	}
 	compiler := NewCompiler(false)
 	compiler.Compile(node)
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
 func TestVM_Run4(t *testing.T) {
@@ -93,7 +93,7 @@ func TestVM_Run4(t *testing.T) {
 	}
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestVM_Run4(t *testing.T) {
 	}
 	compiler := NewCompiler(false)
 	compiler.Compile(node)
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
 func TestVM_Run5(t *testing.T) {
@@ -113,7 +113,7 @@ func TestVM_Run5(t *testing.T) {
 	n
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -121,7 +121,7 @@ func TestVM_Run5(t *testing.T) {
 	}
 	compiler := NewCompiler(false)
 	compiler.Compile(node)
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 
 	// log.Println("======   compiler instruction   ======")
@@ -138,7 +138,7 @@ func TestVM_Run6(t *testing.T) {
 	sum
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -146,7 +146,7 @@ func TestVM_Run6(t *testing.T) {
 	}
 	compiler := NewCompiler(false)
 	compiler.Compile(node)
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 
 	// log.Println("======   compiler instruction   ======")
@@ -162,7 +162,7 @@ func TestVM_Run7(t *testing.T) {
 	add(1,2)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -173,7 +173,7 @@ func TestVM_Run7(t *testing.T) {
 
 	compiler.show()
 
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 
 }
@@ -191,7 +191,7 @@ func TestVM_Run8(t *testing.T) {
 	add(1,0)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -202,7 +202,7 @@ func TestVM_Run8(t *testing.T) {
 
 	compiler.show()
 
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 
 }
@@ -218,7 +218,7 @@ func TestVM_Run9(t *testing.T) {
 	}
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -229,7 +229,7 @@ func TestVM_Run9(t *testing.T) {
 
 	compiler.show()
 
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
 
@@ -247,7 +247,7 @@ func TestVM_Run10(t *testing.T) {
 	fib(10)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -258,7 +258,7 @@ func TestVM_Run10(t *testing.T) {
 
 	compiler.show()
 
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
 
@@ -280,7 +280,7 @@ func TestVM_Run11(t *testing.T) {
 	fib(3)
 	`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	node, err := parser.Parse(nil)
 	if err != nil {
@@ -291,6 +291,43 @@ func TestVM_Run11(t *testing.T) {
 
 	compiler.show()
 
-	vm := NewVM(compiler.bytecode())
+	vm := NewVM(compiler.Bytecode())
+	vm.Run()
+}
+func TestVM_Run12(t *testing.T) {
+	// log.SetOutput(os.Stdout)
+	log.SetOutput(io.Discard)
+	input := `
+	fib := func(n) {
+		if n <= 2{
+			n
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	} hope {
+		2 -> 2
+		35 -> 2
+	}
+	add := func(x, y) {
+		x+y
+	} hope {
+		2,3 -> 3
+	}
+	
+	fib(35)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler(false)
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }

@@ -37,7 +37,7 @@ func (e *Environment) Get(name string) (Object, error) {
 		cur = cur.outter
 
 	}
-	return nil, fmt.Errorf("identifier doesn't exist!")
+	return nil, fmt.Errorf("identifier doesn't exist")
 }
 
 func (e *Environment) Set(name string, val Object) {

@@ -19,9 +19,9 @@ type Lexer struct {
 	hasMore bool
 }
 
-func NewLexer(in io.Reader, regexpPat string) *Lexer {
+func NewLexer(in io.Reader) *Lexer {
 	return &Lexer{
-		pat:     regexp.MustCompile(regexpPat),
+		pat:     regexp.MustCompile(regexPat),
 		scanner: bufio.NewScanner(in),
 		queue:   make([]Token, 0),
 		lineNo:  0,

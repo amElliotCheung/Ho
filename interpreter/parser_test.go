@@ -23,7 +23,7 @@ func TestParser_Parse(t *testing.T) {
 		array[2]
 	}`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	root, err := parser.Parse(nil)
 	t.Log("================ parse root =============\n ", root)
@@ -38,7 +38,7 @@ func TestParser_Parse2(t *testing.T) {
 	b := 1
 	adder(a, b)`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	root, err := parser.Parse(nil)
 	t.Log("================ parse root =============\n ", root)
@@ -50,7 +50,7 @@ func TestParser_Parse3(t *testing.T) {
 	input := `a = true
 	b = !a`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	root, err := parser.Parse(nil)
 	t.Log("================ parse root =============\n ", root)
@@ -66,7 +66,7 @@ func TestParser_Parse4(t *testing.T) {
 	}
 	l`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	root, err := parser.Parse(nil)
 	t.Log("================ parse root =============\n ", root)
@@ -87,7 +87,7 @@ func TestParser_Parse5(t *testing.T) {
 			2 -> 2
 		}`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	root, err := parser.Parse(nil)
 	t.Log("================ parse root =============\n ", root)
@@ -108,7 +108,7 @@ func TestParser_Parse6(t *testing.T) {
 			2 -> 2
 		}`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 	parser := NewParser(lexer)
 	root, err := parser.Parse(nil)
 	t.Log("================ parse root =============\n ", root)

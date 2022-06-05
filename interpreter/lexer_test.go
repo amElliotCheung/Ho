@@ -17,7 +17,7 @@ func TestLexer_Read(t *testing.T) {
 	1,2 -> 3
 	hope`
 	in := strings.NewReader(input)
-	lexer := NewLexer(in, regexPat)
+	lexer := NewLexer(in)
 
 	for tk := lexer.Read(); tk.Literal() != "EOF"; tk = lexer.Read() {
 		log.Println(tk)
