@@ -3,9 +3,9 @@ A programming language
 - named Ho 
 - written in Go 
 - inspired by Go and Pyret
-- with interpreter, compiler, virtual machine
+- based on interpreter and compiler
 
-ho has features:
+Ho has features:
 - inline testing
   
 
