@@ -119,6 +119,7 @@ func (ie IndexExpression) Type() string {
 // ====== function
 type FunctionLiteral struct {
 	Parameters []*IdentifierLiteral
+	ParaTypes  []string
 	Execute    *BlockExpression
 	Hopes      *HopeBlock
 }
@@ -152,16 +153,18 @@ func (f FunctionLiteral) Type() string {
 
 type HopeBlock struct {
 	HopeExpressions []HopeExpression
+	NFuzzing        *IntegerLiteral
 }
 
 func (hb HopeBlock) String() string {
 	var out bytes.Buffer
 	out.WriteString("hope { \n")
-	for i, expr := range hb.HopeExpressions {
-		if i != 0 {
-			out.WriteString("\n")
-		}
+	for _, expr := range hb.HopeExpressions {
 		out.WriteString(expr.String())
+		out.WriteString("\n")
+	}
+	if hb.NFuzzing != nil {
+		out.WriteString(FUZZING + " " + hb.NFuzzing.String())
 	}
 	out.WriteString("\n" + RBRACE)
 

@@ -151,6 +151,42 @@ func (c *Compiler) Compile(node ASTNode) error {
 				// for now, function returns only one value
 				c.emit(OpHope, i+1)
 			}
+			// add fuzzing
+			if fn.Hopes.NFuzzing != nil &&
+				fn.Hopes.NFuzzing.Key > 0 &&
+				len(fn.Parameters) > 0 &&
+				len(fn.ParaTypes) == len(fn.Parameters) {
+
+				for i := 0; i < fn.Hopes.NFuzzing.Key; i++ {
+					if symbol.Scope == GlobalScope {
+						c.emit(OpGetGlobal, symbol.Index)
+					} else if symbol.Scope == LocalScope {
+						c.emit(OpGetLocal, symbol.Index)
+					}
+					for j := 0; j < len(fn.Parameters); j++ {
+						// switch fn.ParaTypes[i] {
+						// case "int":
+						// 	obj := randomObject(fn.ParaTypes[i]).(*Integer)
+						// 	idx := c.addConstant(obj)
+						// 	c.emit(OpConstant, idx)
+						// case "string":
+						// 	obj := randomObject(fn.ParaTypes[i]).(*String)
+						// 	idx := c.addConstant(obj)
+						// 	c.emit(OpConstant, idx)
+						// case "bool":
+						// 	obj := randomObject(fn.ParaTypes[i]).(*Boolean)
+						// 	idx := c.addConstant(obj)
+						// 	c.emit(OpConstant, idx)
+						// }
+
+						obj := randomObject(fn.ParaTypes[j])
+						fmt.Printf("%d-th random obj in %d-th fuzzing = %v\n", j, i, obj)
+						idx := c.addConstant(obj)
+						c.emit(OpConstant, idx)
+					}
+					c.emit(OpCall, len(fn.Parameters))
+				}
+			}
 			// return nil
 		}
 

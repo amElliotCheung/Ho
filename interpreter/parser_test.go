@@ -106,6 +106,29 @@ func TestParser_Parse6(t *testing.T) {
 			0 -> 0	
 			1 -> 1
 			2 -> 2
+			fuzzing 1
+		}`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in)
+	parser := NewParser(lexer)
+	root, err := parser.Parse(nil)
+	t.Log("================ parse root =============\n ", root)
+	t.Log("================ parse ERROR =============\n ", err)
+
+}
+
+func TestParser_Parse7(t *testing.T) {
+	input := `fib := func(n int) {
+			if n <= 2{
+				n
+			} else {
+				fib(n-1) + fib(n-2)
+			}
+		} hope {
+			0 -> 0	
+			1 -> 1
+			2 -> 2
+			fuzzing 1
 		}`
 	in := strings.NewReader(input)
 	lexer := NewLexer(in)

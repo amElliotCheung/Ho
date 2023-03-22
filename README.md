@@ -1,15 +1,33 @@
-# Stone-Go
-an interpreter written by golang to interpret a language named stone
+# Ho
+A programming language 
+- named Ho 
+- written in Go 
+- inspired by Go and Pyret
+- with interpreter, compiler, virtual machine
 
-stone is like
+ho has features:
+- inline testing
+  
 
+Ho is like
 ```Go
-fib := func(n) {
+fib := func(n int) {
   n <= 2 ? n : fib(n-1) + fib(n-2)
 } hope {
   1 -> 1
   2 -> 2
   3 -> 3
+  10 -> 89
 }
-fib(50)
 ```
+hope block is like:
+```Go
+func (...) {
+  ...
+} hope {
+  input -> expected output
+  ...
+}
+```
+
+

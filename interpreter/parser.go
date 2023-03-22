@@ -316,7 +316,7 @@ func (p *Parser) parseHopeBlock() (*HopeBlock, error) {
 	hopeBlock := &HopeBlock{
 		HopeExpressions: make([]HopeExpression, 0),
 	}
-	for !p.checkCur(RBRACE) {
+	for !p.checkCur(RBRACE) && !p.checkCur(FUZZING) {
 		if p.cur == EOL {
 			p.advance()
 			continue
@@ -331,7 +331,15 @@ func (p *Parser) parseHopeBlock() (*HopeBlock, error) {
 		log.Printf("++\n\nafter parse answer %v %v\n\n++", p.cur, p.next)
 		hopeBlock.HopeExpressions = append(hopeBlock.HopeExpressions, hpe)
 	}
-	p.skip("}")
+
+	if p.checkCur(FUZZING) {
+		p.skip(FUZZING)
+		val, _ := strconv.Atoi(p.cur.Literal())
+		hopeBlock.NFuzzing = &IntegerLiteral{Key: val}
+		p.advance()
+		p.advance()
+	}
+	p.skip(RBRACE)
 	return hopeBlock, nil
 }
 func (p *Parser) parseIndexExpression(left Expression) (Expression, error) {
@@ -393,10 +401,11 @@ func (p *Parser) parseArray() (Expression, error) {
 
 func (p *Parser) parseFunction() (Expression, error) {
 	p.skip("func")
-	paras, _ := p.parseIdentifierList()
+	paras, typs, _ := p.parseIdentifierList()
 	p.skip(RPAREN)
 	exec, _ := p.parseBlockExpression()
 
+	// parse hope
 	var hopes *HopeBlock
 	hopes = nil
 	if p.checkCur("hope") {
@@ -405,24 +414,38 @@ func (p *Parser) parseFunction() (Expression, error) {
 	}
 	return &FunctionLiteral{
 		Parameters: paras,
+		ParaTypes:  typs,
 		Execute:    exec,
 		Hopes:      hopes,
 	}, nil
 }
-func (p *Parser) parseIdentifierList() ([]*IdentifierLiteral, error) {
+
+// parse function parameters
+func (p *Parser) parseIdentifierList() ([]*IdentifierLiteral, []string, error) {
 	p.skip(LPAREN)
-	list := []*IdentifierLiteral{}
+	identList := []*IdentifierLiteral{}
+	typeList := []string{}
 	if p.checkCur(RPAREN) { // no identifier
-		return list, nil
+		return identList, typeList, nil
 	}
 	for {
 		ident := &IdentifierLiteral{Key: p.cur.Literal()}
-		list = append(list, ident)
+		identList = append(identList, ident)
 		p.advance()
-		if p.checkCur(RPAREN) {
-			return list, nil
-		} else if p.checkCur(COMMA) {
+		if p.checkCur("int") || p.checkCur("string") || p.checkCur("bool") {
+			typeList = append(typeList, p.cur.Literal())
 			p.advance()
+		} else {
+			typeList = append(typeList, "") // empty string
+		}
+		switch {
+
+		case p.checkCur(RPAREN):
+			return identList, typeList, nil
+
+		case p.checkCur(COMMA):
+			p.advance()
+
 		}
 	}
 }

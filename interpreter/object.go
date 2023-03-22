@@ -3,9 +3,15 @@ package interpreter
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 const (
 	IDENTIFIER_OBJ = "IDENTIFIER" // add, x, y, ...
@@ -140,4 +146,27 @@ func (cf *CompiledFunction) Type() string {
 
 func (cf *CompiledFunction) String() string {
 	return fmt.Sprintf("func(%d paras, %d locals )", cf.NumParas, cf.NumLocals)
+}
+
+func randomObject(s string) Object {
+
+	var res Object
+	switch s {
+	case "int":
+		v := rand.Int() - 1
+		if rand.Intn(2) == 0 { // [0, 2) = 0, 1
+			v = -v
+		}
+		res = &Integer{Value: v}
+
+	case "bool":
+		res = &Boolean{Value: bool(rand.Intn(2) == 0)}
+
+	case "string":
+		res = &String{Value: " "}
+	default:
+
+		panic(fmt.Sprintf("invalid input = %s", s))
+	}
+	return res
 }

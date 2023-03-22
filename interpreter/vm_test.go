@@ -331,3 +331,95 @@ func TestVM_Run12(t *testing.T) {
 	vm := NewVM(compiler.Bytecode())
 	vm.Run()
 }
+
+func TestVM_Run13(t *testing.T) {
+	// log.SetOutput(os.Stdout)
+	log.SetOutput(io.Discard)
+	input := `
+	// a wrong function
+	// virtual machine would give warning
+	// "want 0, got 1 in the 1st test case"
+	add := func(x int, y int) {
+		x
+	} hope {
+		1, -1 -> 0
+	}
+	sum := func(n int) {
+		ans := 0
+		i := 1
+		while i <= n {
+			ans = ans + i
+			i = i + 1
+		}
+		ans
+	} hope {
+		1 -> 1
+		10 -> 55
+	}
+	sum(2)
+	sum(5)
+	sum(10)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler(false)
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.Bytecode())
+	vm.Run()
+}
+
+func TestVM_Run14(t *testing.T) {
+	// log.SetOutput(os.Stdout)
+	log.SetOutput(io.Discard)
+	input := `
+	fib := func(n int) {
+		if n <= 3 {
+			n / 2
+		} else {
+			fib(n-1) + fib(n-2)
+		}
+	} hope {
+		1 -> 0
+		2 -> 1
+		3 -> 1
+		10 -> 34
+	}
+	add := func(x int, y int) {
+		x+y
+	} hope {
+		2,3 -> 1 // a wrong case
+		fuzzing 9
+	}
+
+	reserve := func(b bool) {
+		!b
+	} hope {
+		true -> false
+		false -> true
+	}
+	
+	reserver(true)
+	`
+	in := strings.NewReader(input)
+	lexer := NewLexer(in)
+	parser := NewParser(lexer)
+	node, err := parser.Parse(nil)
+	if err != nil {
+		log.Println(err)
+	}
+	compiler := NewCompiler(false)
+	compiler.Compile(node)
+
+	compiler.show()
+
+	vm := NewVM(compiler.Bytecode())
+	vm.Run()
+}

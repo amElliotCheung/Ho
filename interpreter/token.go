@@ -41,6 +41,7 @@ const (
 	TRUE     = "true"
 	FALSE    = "false"
 	HOPE     = "hope"
+	FUZZING  = "fuzzing"
 )
 
 type Token interface {

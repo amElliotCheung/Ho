@@ -5,14 +5,15 @@
 			fib(n-1) + fib(n-2)
 		}
 	} hope {
+		1 -> 1
 		2 -> 2
-		31 -> 2
+		10 -> 89
 	}
-	add := func(x, y) {
+	add := func(x int, y int) {
 		x+y
 	} hope {
 		2,3 -> 5
+		fuzzing 10
 	}
-    fib(2)
-	add(1,2)
+    fib(add(1,2))
 	
